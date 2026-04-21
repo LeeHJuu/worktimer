@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze *)",
+      "Read(//c/Users/xyide/AppData/Local/flutter/bin/**)",
+      "Read(//c/flutter/bin/**)",
+      "Bash(/c/flutter/bin/flutter analyze *)",
+      "Bash(/c/flutter/bin/flutter run *)",
+      "Bash(where flutter *)",
+      "Bash(/c/flutter/bin/flutter.bat analyze *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(flutter pub *)",
+      "Bash(export PATH=\"/c/flutter/bin:$PATH\")",
+      "Bash(dart run *)"
+    ]
+  }
+}

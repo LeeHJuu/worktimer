@@ -1,6 +1,6 @@
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:window_manager/window_manager.dart';
 import '../../../../core/utils/time_utils.dart';
 import '../../../../data/database/app_database.dart';
 import '../../../../data/repositories/timer_repository.dart';
@@ -21,8 +21,9 @@ class TimerCard extends ConsumerWidget {
         ?.where((c) => c.id == timerState.activeCategoryId)
         .firstOrNull;
 
-    final color =
-        activeCategory != null ? _parseColor(activeCategory.color) : null;
+    final color = activeCategory != null
+        ? _parseColor(activeCategory.color)
+        : null;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -100,17 +101,20 @@ class _CategoryLabel extends StatelessWidget {
         Container(
           width: 10,
           height: 10,
-          decoration:
-              BoxDecoration(color: effectiveColor, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+            color: effectiveColor,
+            shape: BoxShape.circle,
+          ),
         ),
         const SizedBox(width: 8),
         Flexible(
           child: Text(
             category!.name,
             style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: effectiveColor),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: effectiveColor,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -122,11 +126,14 @@ class _CategoryLabel extends StatelessWidget {
               color: Colors.orange.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: const Text('일시정지',
-                style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.orange,
-                    fontWeight: FontWeight.w600)),
+            child: const Text(
+              '일시정지',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.orange,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ],
@@ -153,8 +160,8 @@ class _ElapsedTimeDisplay extends StatelessWidget {
     final displayColor = status == TimerStatus.idle
         ? colorScheme.onSurface.withValues(alpha: 0.12)
         : status == TimerStatus.paused
-            ? Colors.orange.withValues(alpha: 0.7)
-            : (color ?? Colors.blueAccent);
+        ? Colors.orange.withValues(alpha: 0.7)
+        : (color ?? Colors.blueAccent);
 
     return Text(
       TimeUtils.formatSeconds(seconds),
@@ -222,10 +229,21 @@ class _TimerControls extends ConsumerWidget {
           label: '미니창',
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           onTap: () async {
-            ref.read(miniModeProvider.notifier).state = true;
-            await windowManager.setResizable(false);
-            await windowManager.setSize(const Size(360, 96));
-            await windowManager.setAlwaysOnTop(true);
+            final existing = ref.read(miniWindowIdProvider);
+            if (existing != null) {
+              // 이미 열려 있으면 포커스
+              try {
+                await WindowController.fromWindowId(existing).show();
+              } catch (_) {
+                ref.read(miniWindowIdProvider.notifier).state = null;
+              }
+              return;
+            }
+            // 새 서브윈도우 생성
+            final controller = await DesktopMultiWindow.createWindow('mini');
+            await controller.show();
+            ref.read(miniWindowIdProvider.notifier).state =
+                controller.windowId;
           },
         ),
       ],
@@ -235,7 +253,10 @@ class _TimerControls extends ConsumerWidget {
 
 /// 세션 종료 후 메모 입력 다이얼로그
 Future<void> _showMemoDialog(
-    BuildContext context, WidgetRef ref, int sessionId) async {
+  BuildContext context,
+  WidgetRef ref,
+  int sessionId,
+) async {
   final controller = TextEditingController();
   final repo = TimerRepository(ref.read(appDatabaseProvider));
 
@@ -286,10 +307,7 @@ Future<void> _showMemoDialog(
 // ── 시작 버튼 ─────────────────────────────────
 
 class _StartButton extends StatefulWidget {
-  const _StartButton({
-    required this.categories,
-    required this.onStart,
-  });
+  const _StartButton({required this.categories, required this.onStart});
 
   final List<Category> categories;
   final ValueChanged<int> onStart;
@@ -333,48 +351,52 @@ class _StartButtonState extends State<_StartButton> {
             hint: const Text('카테고리 선택'),
             decoration: const InputDecoration(
               isDense: true,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
               border: OutlineInputBorder(),
             ),
             isExpanded: true,
             items: widget.categories
-                .map((c) => DropdownMenuItem(
-                      value: c.id,
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: _parseColor(c.color),
-                              shape: BoxShape.circle,
-                            ),
+                .map(
+                  (c) => DropdownMenuItem(
+                    value: c.id,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _parseColor(c.color),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              c.name,
-                              style: const TextStyle(fontSize: 13),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            c.name,
+                            style: const TextStyle(fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ],
-                      ),
-                    ))
+                        ),
+                      ],
+                    ),
+                  ),
+                )
                 .toList(),
             onChanged: (v) => setState(() => _selectedId = v),
           ),
         ),
         const SizedBox(height: 16),
         ElevatedButton.icon(
-          onPressed:
-              _selectedId != null ? () => widget.onStart(_selectedId!) : null,
+          onPressed: _selectedId != null
+              ? () => widget.onStart(_selectedId!)
+              : null,
           icon: const Icon(Icons.play_arrow),
           label: const Text('시작'),
           style: ElevatedButton.styleFrom(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
           ),
         ),
       ],

@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/window_provider.dart';
 import '../home/home_screen.dart';
-import '../mini_timer/mini_timer_screen.dart';
-import '../stats/stats_screen.dart';
 import '../manage/manage_screen.dart';
-import '../settings/settings_screen.dart';
 import 'sidebar.dart';
 
 class AppShell extends ConsumerStatefulWidget {
@@ -20,16 +16,11 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   static const _screens = [
     HomeScreen(),
-    StatsScreen(),
     ManageScreen(),
-    SettingsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final isMini = ref.watch(miniModeProvider);
-    if (isMini) return const MiniTimerScreen();
-
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(

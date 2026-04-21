@@ -29,6 +29,10 @@ class Categories extends Table {
   BoolColumn get goalIsActive =>
       boolean().withDefault(const Constant(false))();
 
+  /// 포커스 자동 타이머가 idle 상태에서 이 카테고리를 자동 시작할지 여부
+  BoolColumn get autoTimerOn =>
+      boolean().withDefault(const Constant(false))();
+
   /// 생성 시각 (Unix timestamp)
   IntColumn get createdAt => integer()();
 }

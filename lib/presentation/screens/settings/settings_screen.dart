@@ -3,7 +3,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants.dart';
-import '../../../core/theme.dart';
+import '../../providers/auto_timer_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/theme_provider.dart';
 
@@ -56,54 +56,139 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('설정', style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 24),
-
-          // ── 테마 섹션 ──
-          _SectionTitle(title: '테마'),
-          const SizedBox(height: 12),
-          const _ThemeSection(),
-          const SizedBox(height: 32),
-
-          // ── 가용 시간 ──
-          _SectionTitle(title: '과부하 감지 — 가용 시간'),
-          const SizedBox(height: 12),
-          Row(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _SettingField(
-                  label: '평일 가용시간 (시간)',
-                  controller: _weekdayCtrl,
+              Text('설정', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 24),
+
+              // ── 테마 섹션 ──
+              _SectionTitle(title: '테마'),
+              const SizedBox(height: 12),
+              const _ThemeSection(),
+              const SizedBox(height: 32),
+
+              // ── 포커스 자동 타이머 ──
+              _SectionTitle(title: '포커스 자동 타이머'),
+              const SizedBox(height: 12),
+              const _AutoTimerSection(),
+              const SizedBox(height: 32),
+
+              // ── 가용 시간 ──
+              _SectionTitle(title: '과부하 감지 — 가용 시간'),
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Column(
+                    children: [
+                      _SettingRow(
+                        label: '평일 가용시간',
+                        hint: '시간 단위 (예: 1.5)',
+                        child: TextField(
+                          controller: _weekdayCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            suffixText: 'h',
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      _SettingRow(
+                        label: '주말 가용시간',
+                        hint: '시간 단위 (예: 4.0)',
+                        child: TextField(
+                          controller: _weekendCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            suffixText: 'h',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _SettingField(
-                  label: '주말 가용시간 (시간)',
-                  controller: _weekendCtrl,
-                ),
+              const SizedBox(height: 24),
+
+              ElevatedButton(
+                onPressed: _save,
+                child: const Text('저장'),
               ),
+              const SizedBox(height: 32),
+
+              // ── 지원 ──
+              _SectionTitle(title: '지원'),
+              const SizedBox(height: 12),
+              const _FeedbackSection(),
             ],
           ),
-          const SizedBox(height: 24),
+        ),
+      ),
+    );
+  }
+}
 
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: _save,
-            child: const Text('저장'),
-          ),
-          const SizedBox(height: 32),
+// ── 자동 타이머 섹션 ──────────────────────────────────────────
 
-          // ── 지원 ──
-          _SectionTitle(title: '지원'),
-          const SizedBox(height: 12),
-          const _FeedbackSection(),
-        ],
+class _AutoTimerSection extends ConsumerWidget {
+  const _AutoTimerSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(autoTimerEnabledProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.center_focus_strong_outlined,
+                    size: 18, color: colorScheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '등록된 바로가기 프로그램/브라우저에 포커스된 동안에만 타이머가 동작합니다.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('자동 타이머 사용', style: TextStyle(fontSize: 13)),
+              subtitle: Text(
+                '꺼짐 상태에서는 포커스 변화로 타이머가 조작되지 않습니다.',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+              value: enabled,
+              onChanged: (v) async {
+                ref.read(autoTimerEnabledProvider.notifier).state = v;
+                await ref
+                    .read(settingsRepositoryProvider)
+                    .set(AppConstants.keyAutoTimerEnabled, v ? '1' : '0');
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -120,141 +205,88 @@ class _ThemeSection extends ConsumerWidget {
     final notifier = ref.read(themeProvider.notifier);
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 라이트 / 다크 / 커스텀 선택
-            Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── 안내 ──
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
               children: [
-                _ThemeModeChip(
-                  label: '다크',
-                  icon: Icons.dark_mode_outlined,
-                  selected: themeConfig.mode == AppThemeMode.dark,
-                  onTap: () => notifier.setMode(AppThemeMode.dark),
-                ),
-                const SizedBox(width: 8),
-                _ThemeModeChip(
-                  label: '라이트',
-                  icon: Icons.light_mode_outlined,
-                  selected: themeConfig.mode == AppThemeMode.light,
-                  onTap: () => notifier.setMode(AppThemeMode.light),
-                ),
-                const SizedBox(width: 8),
-                _ThemeModeChip(
-                  label: '커스텀',
-                  icon: Icons.palette_outlined,
-                  selected: themeConfig.mode == AppThemeMode.custom,
-                  onTap: () => notifier.setMode(AppThemeMode.custom),
+                Icon(Icons.info_outline,
+                    size: 16, color: colorScheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '메인 컬러가 밝으면 라이트 테마, 어두우면 다크 테마가 자동 적용됩니다.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
                 ),
               ],
             ),
-
-            // 커스텀 모드일 때만 색상 선택기 표시
-            if (themeConfig.mode == AppThemeMode.custom) ...[
-              const SizedBox(height: 16),
-              Text(
-                '씨앗 색상 (Seed Color)',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  // 현재 색상 프리뷰
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      onTap: () => _pickColor(context, ref, themeConfig),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: themeConfig.seedColor,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: colorScheme.outline.withValues(alpha: 0.3),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    themeConfig.seedColorHex.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontFamily: 'monospace',
-                      color: colorScheme.onSurface.withValues(alpha: 0.8),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        _pickColor(context, ref, themeConfig),
-                    icon: const Icon(Icons.colorize, size: 16),
-                    label: const Text('색상 선택'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // 밝기 토글 (라이트/다크)
-              Row(
-                children: [
-                  Text(
-                    '배경 밝기',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  SegmentedButton<Brightness>(
-                    segments: const [
-                      ButtonSegment(
-                        value: Brightness.dark,
-                        icon: Icon(Icons.dark_mode_outlined, size: 16),
-                        label: Text('다크'),
-                      ),
-                      ButtonSegment(
-                        value: Brightness.light,
-                        icon: Icon(Icons.light_mode_outlined, size: 16),
-                        label: Text('라이트'),
-                      ),
-                    ],
-                    selected: {themeConfig.brightness},
-                    onSelectionChanged: (s) async {
-                      await ref
-                          .read(themeProvider.notifier)
-                          .setBrightness(s.first);
-                    },
-                    style: const ButtonStyle(
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
+          ),
         ),
-      ),
+
+        const SizedBox(height: 12),
+
+        // ── 메인(배경) + 서브(강조) 컬러 ──
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '컬러 커스텀',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _ColorPickerRow(
+                  label: '메인 (배경)',
+                  color: themeConfig.backgroundColor,
+                  hexString: themeConfig.backgroundColorHex.toUpperCase(),
+                  onPick: () => _pickColor(
+                    context,
+                    ref,
+                    themeConfig.backgroundColor,
+                    (hex) => notifier.setBackgroundColor(hex),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _ColorPickerRow(
+                  label: '서브 (강조)',
+                  color: themeConfig.accentColor,
+                  hexString: themeConfig.accentColorHex.toUpperCase(),
+                  onPick: () => _pickColor(
+                    context,
+                    ref,
+                    themeConfig.accentColor,
+                    (hex) => notifier.setAccentColor(hex),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Future<void> _pickColor(
-      BuildContext context, WidgetRef ref, AppThemeConfig config) async {
-    Color pickedColor = config.seedColor;
+    BuildContext context,
+    WidgetRef ref,
+    Color initial,
+    void Function(String hex) onApply,
+  ) async {
+    Color picked = initial;
 
     await showDialog<void>(
       context: context,
@@ -262,8 +294,8 @@ class _ThemeSection extends ConsumerWidget {
         title: const Text('색상 선택'),
         content: SingleChildScrollView(
           child: ColorPicker(
-            pickerColor: pickedColor,
-            onColorChanged: (c) => pickedColor = c,
+            pickerColor: picked,
+            onColorChanged: (c) => picked = c,
             enableAlpha: false,
             pickerAreaHeightPercent: 0.7,
           ),
@@ -276,10 +308,10 @@ class _ThemeSection extends ConsumerWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              final argb = pickedColor.toARGB32();
+              final argb = picked.toARGB32();
               final hex =
                   '#${(argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
-              ref.read(themeProvider.notifier).setSeedColor(hex);
+              onApply(hex);
             },
             child: const Text('적용'),
           ),
@@ -289,70 +321,75 @@ class _ThemeSection extends ConsumerWidget {
   }
 }
 
-// ── 테마 모드 칩 ─────────────────────────────────────────────
+// ── 색상 선택 행 ──────────────────────────────────────────────
 
-class _ThemeModeChip extends StatelessWidget {
-  const _ThemeModeChip({
+class _ColorPickerRow extends StatelessWidget {
+  const _ColorPickerRow({
     required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
+    required this.color,
+    required this.hexString,
+    required this.onPick,
   });
 
   final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
+  final Color color;
+  final String hexString;
+  final VoidCallback onPick;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected
-                ? colorScheme.primary.withValues(alpha: 0.15)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected
-                  ? colorScheme.primary
-                  : colorScheme.outline.withValues(alpha: 0.3),
-              width: selected ? 1.5 : 1,
+    return Row(
+      children: [
+        SizedBox(
+          width: 70,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: selected
-                    ? colorScheme.primary
-                    : colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight:
-                      selected ? FontWeight.w600 : FontWeight.normal,
-                  color: selected
-                      ? colorScheme.primary
-                      : colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
+        const SizedBox(width: 8),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: onPick,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: colorScheme.outline.withValues(alpha: 0.3),
                 ),
               ),
-            ],
+            ),
           ),
         ),
-      ),
+        const SizedBox(width: 10),
+        Text(
+          hexString,
+          style: TextStyle(
+            fontSize: 12,
+            fontFamily: 'monospace',
+            color: colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+        const SizedBox(width: 10),
+        OutlinedButton.icon(
+          onPressed: onPick,
+          icon: const Icon(Icons.colorize, size: 14),
+          label: const Text('변경', style: TextStyle(fontSize: 12)),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -378,31 +415,56 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _SettingField extends StatelessWidget {
-  const _SettingField({required this.label, required this.controller});
+class _SettingRow extends StatelessWidget {
+  const _SettingRow({
+    required this.label,
+    required this.child,
+    this.hint,
+  });
+
   final String label;
-  final TextEditingController controller;
+  final Widget child;
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: colorScheme.onSurface.withValues(alpha: 0.6),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                if (hint != null)
+                  Text(
+                    hint!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colorScheme.onSurface.withValues(alpha: 0.45),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
-        ),
-      ],
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 3,
+            child: child,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -412,7 +474,6 @@ class _SettingField extends StatelessWidget {
 class _FeedbackSection extends StatelessWidget {
   const _FeedbackSection();
 
-  // 수신 주소 — UI에 노출하지 않음
   static const _to = 'xyident124@naver.com';
 
   Future<void> _sendMail(BuildContext context, String subject) async {

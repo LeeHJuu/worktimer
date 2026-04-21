@@ -123,6 +123,21 @@ class $CategoriesTable extends Categories
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _autoTimerOnMeta = const VerificationMeta(
+    'autoTimerOn',
+  );
+  @override
+  late final GeneratedColumn<bool> autoTimerOn = GeneratedColumn<bool>(
+    'auto_timer_on',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("auto_timer_on" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -146,6 +161,7 @@ class $CategoriesTable extends Categories
     goalTargetHours,
     goalDeadline,
     goalIsActive,
+    autoTimerOn,
     createdAt,
   ];
   @override
@@ -232,6 +248,15 @@ class $CategoriesTable extends Categories
         ),
       );
     }
+    if (data.containsKey('auto_timer_on')) {
+      context.handle(
+        _autoTimerOnMeta,
+        autoTimerOn.isAcceptableOrUnknown(
+          data['auto_timer_on']!,
+          _autoTimerOnMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -289,6 +314,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.bool,
         data['${effectivePrefix}goal_is_active'],
       )!,
+      autoTimerOn: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}auto_timer_on'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -328,6 +357,9 @@ class Category extends DataClass implements Insertable<Category> {
   /// 목표 활성화 여부
   final bool goalIsActive;
 
+  /// 포커스 자동 타이머가 idle 상태에서 이 카테고리를 자동 시작할지 여부
+  final bool autoTimerOn;
+
   /// 생성 시각 (Unix timestamp)
   final int createdAt;
   const Category({
@@ -341,6 +373,7 @@ class Category extends DataClass implements Insertable<Category> {
     this.goalTargetHours,
     this.goalDeadline,
     required this.goalIsActive,
+    required this.autoTimerOn,
     required this.createdAt,
   });
   @override
@@ -364,6 +397,7 @@ class Category extends DataClass implements Insertable<Category> {
       map['goal_deadline'] = Variable<int>(goalDeadline);
     }
     map['goal_is_active'] = Variable<bool>(goalIsActive);
+    map['auto_timer_on'] = Variable<bool>(autoTimerOn);
     map['created_at'] = Variable<int>(createdAt);
     return map;
   }
@@ -386,6 +420,7 @@ class Category extends DataClass implements Insertable<Category> {
           ? const Value.absent()
           : Value(goalDeadline),
       goalIsActive: Value(goalIsActive),
+      autoTimerOn: Value(autoTimerOn),
       createdAt: Value(createdAt),
     );
   }
@@ -406,6 +441,7 @@ class Category extends DataClass implements Insertable<Category> {
       goalTargetHours: serializer.fromJson<double?>(json['goalTargetHours']),
       goalDeadline: serializer.fromJson<int?>(json['goalDeadline']),
       goalIsActive: serializer.fromJson<bool>(json['goalIsActive']),
+      autoTimerOn: serializer.fromJson<bool>(json['autoTimerOn']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
     );
   }
@@ -423,6 +459,7 @@ class Category extends DataClass implements Insertable<Category> {
       'goalTargetHours': serializer.toJson<double?>(goalTargetHours),
       'goalDeadline': serializer.toJson<int?>(goalDeadline),
       'goalIsActive': serializer.toJson<bool>(goalIsActive),
+      'autoTimerOn': serializer.toJson<bool>(autoTimerOn),
       'createdAt': serializer.toJson<int>(createdAt),
     };
   }
@@ -438,6 +475,7 @@ class Category extends DataClass implements Insertable<Category> {
     Value<double?> goalTargetHours = const Value.absent(),
     Value<int?> goalDeadline = const Value.absent(),
     bool? goalIsActive,
+    bool? autoTimerOn,
     int? createdAt,
   }) => Category(
     id: id ?? this.id,
@@ -452,6 +490,7 @@ class Category extends DataClass implements Insertable<Category> {
         : this.goalTargetHours,
     goalDeadline: goalDeadline.present ? goalDeadline.value : this.goalDeadline,
     goalIsActive: goalIsActive ?? this.goalIsActive,
+    autoTimerOn: autoTimerOn ?? this.autoTimerOn,
     createdAt: createdAt ?? this.createdAt,
   );
   Category copyWithCompanion(CategoriesCompanion data) {
@@ -472,6 +511,9 @@ class Category extends DataClass implements Insertable<Category> {
       goalIsActive: data.goalIsActive.present
           ? data.goalIsActive.value
           : this.goalIsActive,
+      autoTimerOn: data.autoTimerOn.present
+          ? data.autoTimerOn.value
+          : this.autoTimerOn,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -489,6 +531,7 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('goalTargetHours: $goalTargetHours, ')
           ..write('goalDeadline: $goalDeadline, ')
           ..write('goalIsActive: $goalIsActive, ')
+          ..write('autoTimerOn: $autoTimerOn, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -506,6 +549,7 @@ class Category extends DataClass implements Insertable<Category> {
     goalTargetHours,
     goalDeadline,
     goalIsActive,
+    autoTimerOn,
     createdAt,
   );
   @override
@@ -522,6 +566,7 @@ class Category extends DataClass implements Insertable<Category> {
           other.goalTargetHours == this.goalTargetHours &&
           other.goalDeadline == this.goalDeadline &&
           other.goalIsActive == this.goalIsActive &&
+          other.autoTimerOn == this.autoTimerOn &&
           other.createdAt == this.createdAt);
 }
 
@@ -536,6 +581,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<double?> goalTargetHours;
   final Value<int?> goalDeadline;
   final Value<bool> goalIsActive;
+  final Value<bool> autoTimerOn;
   final Value<int> createdAt;
   const CategoriesCompanion({
     this.id = const Value.absent(),
@@ -548,6 +594,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.goalTargetHours = const Value.absent(),
     this.goalDeadline = const Value.absent(),
     this.goalIsActive = const Value.absent(),
+    this.autoTimerOn = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   CategoriesCompanion.insert({
@@ -561,6 +608,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.goalTargetHours = const Value.absent(),
     this.goalDeadline = const Value.absent(),
     this.goalIsActive = const Value.absent(),
+    this.autoTimerOn = const Value.absent(),
     required int createdAt,
   }) : name = Value(name),
        color = Value(color),
@@ -577,6 +625,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<double>? goalTargetHours,
     Expression<int>? goalDeadline,
     Expression<bool>? goalIsActive,
+    Expression<bool>? autoTimerOn,
     Expression<int>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -590,6 +639,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (goalTargetHours != null) 'goal_target_hours': goalTargetHours,
       if (goalDeadline != null) 'goal_deadline': goalDeadline,
       if (goalIsActive != null) 'goal_is_active': goalIsActive,
+      if (autoTimerOn != null) 'auto_timer_on': autoTimerOn,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -605,6 +655,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<double?>? goalTargetHours,
     Value<int?>? goalDeadline,
     Value<bool>? goalIsActive,
+    Value<bool>? autoTimerOn,
     Value<int>? createdAt,
   }) {
     return CategoriesCompanion(
@@ -618,6 +669,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       goalTargetHours: goalTargetHours ?? this.goalTargetHours,
       goalDeadline: goalDeadline ?? this.goalDeadline,
       goalIsActive: goalIsActive ?? this.goalIsActive,
+      autoTimerOn: autoTimerOn ?? this.autoTimerOn,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -655,6 +707,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (goalIsActive.present) {
       map['goal_is_active'] = Variable<bool>(goalIsActive.value);
     }
+    if (autoTimerOn.present) {
+      map['auto_timer_on'] = Variable<bool>(autoTimerOn.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -674,6 +729,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('goalTargetHours: $goalTargetHours, ')
           ..write('goalDeadline: $goalDeadline, ')
           ..write('goalIsActive: $goalIsActive, ')
+          ..write('autoTimerOn: $autoTimerOn, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -2116,6 +2172,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       Value<double?> goalTargetHours,
       Value<int?> goalDeadline,
       Value<bool> goalIsActive,
+      Value<bool> autoTimerOn,
       required int createdAt,
     });
 typedef $$CategoriesTableUpdateCompanionBuilder =
@@ -2130,6 +2187,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<double?> goalTargetHours,
       Value<int?> goalDeadline,
       Value<bool> goalIsActive,
+      Value<bool> autoTimerOn,
       Value<int> createdAt,
     });
 
@@ -2233,6 +2291,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<bool> get goalIsActive => $composableBuilder(
     column: $table.goalIsActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get autoTimerOn => $composableBuilder(
+    column: $table.autoTimerOn,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2351,6 +2414,11 @@ class $$CategoriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get autoTimerOn => $composableBuilder(
+    column: $table.autoTimerOn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -2399,6 +2467,11 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<bool> get goalIsActive => $composableBuilder(
     column: $table.goalIsActive,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get autoTimerOn => $composableBuilder(
+    column: $table.autoTimerOn,
     builder: (column) => column,
   );
 
@@ -2494,6 +2567,7 @@ class $$CategoriesTableTableManager
                 Value<double?> goalTargetHours = const Value.absent(),
                 Value<int?> goalDeadline = const Value.absent(),
                 Value<bool> goalIsActive = const Value.absent(),
+                Value<bool> autoTimerOn = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
               }) => CategoriesCompanion(
                 id: id,
@@ -2506,6 +2580,7 @@ class $$CategoriesTableTableManager
                 goalTargetHours: goalTargetHours,
                 goalDeadline: goalDeadline,
                 goalIsActive: goalIsActive,
+                autoTimerOn: autoTimerOn,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -2520,6 +2595,7 @@ class $$CategoriesTableTableManager
                 Value<double?> goalTargetHours = const Value.absent(),
                 Value<int?> goalDeadline = const Value.absent(),
                 Value<bool> goalIsActive = const Value.absent(),
+                Value<bool> autoTimerOn = const Value.absent(),
                 required int createdAt,
               }) => CategoriesCompanion.insert(
                 id: id,
@@ -2532,6 +2608,7 @@ class $$CategoriesTableTableManager
                 goalTargetHours: goalTargetHours,
                 goalDeadline: goalDeadline,
                 goalIsActive: goalIsActive,
+                autoTimerOn: autoTimerOn,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

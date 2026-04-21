@@ -1,45 +1,95 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:window_manager/window_manager.dart';
-import '../../providers/category_provider.dart';
-import '../../providers/window_provider.dart';
-import '../../../domain/services/timer_service.dart';
+import 'dart:convert';
+import 'dart:io';
 
-/// 작업 중 화면에 띄워두는 소형 플로팅 타이머 창
-class MiniTimerScreen extends ConsumerWidget {
+import 'package:desktop_multi_window/desktop_multi_window.dart';
+import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
+
+/// 미니 타이머 — 별도 플로팅 서브윈도우로 실행되는 화면.
+///
+/// 타이머 상태는 메인 창에서 `desktop_multi_window` IPC 로 수신.
+/// 제어 버튼 → 메인 창으로 명령 전송 (`mini_command`).
+class MiniTimerScreen extends StatefulWidget {
   const MiniTimerScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final timerState = ref.watch(timerServiceProvider);
-    final timerNotifier = ref.read(timerServiceProvider.notifier);
-    final categoriesAsync = ref.watch(categoriesProvider);
-    final colorScheme = Theme.of(context).colorScheme;
+  State<MiniTimerScreen> createState() => _MiniTimerScreenState();
+}
 
-    // 활성 카테고리명 조회
-    final categoryName = categoriesAsync.maybeWhen(
-      data: (cats) {
-        if (timerState.activeCategoryId == null) return null;
-        try {
-          return cats
-              .firstWhere((c) => c.id == timerState.activeCategoryId)
-              .name;
-        } catch (_) {
-          return null;
-        }
-      },
-      orElse: () => null,
-    );
+class _MiniTimerScreenState extends State<MiniTimerScreen> {
+  // IPC 로 수신한 타이머 스냅샷
+  String _status = 'idle'; // 'idle' | 'running' | 'paused'
+  int _elapsed = 0;
+  String? _categoryName;
+  String _categoryColor = '#6C63FF';
 
-    // 경과 시간 포맷 (HH:MM:SS)
-    final elapsed = timerState.elapsedSeconds;
-    final hh = (elapsed ~/ 3600).toString().padLeft(2, '0');
-    final mm = ((elapsed % 3600) ~/ 60).toString().padLeft(2, '0');
-    final ss = (elapsed % 60).toString().padLeft(2, '0');
-    final elapsedText = '$hh:$mm:$ss';
+  @override
+  void initState() {
+    super.initState();
+    if (Platform.isWindows) _setupIpcHandler();
+  }
+
+  void _setupIpcHandler() {
+    DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
+      if (call.method == 'timer_update' && mounted) {
+        final data =
+            jsonDecode(call.arguments as String) as Map<String, dynamic>;
+        setState(() {
+          _status = (data['status'] as String?) ?? 'idle';
+          _elapsed = (data['elapsed'] as int?) ?? 0;
+          _categoryName = data['categoryName'] as String?;
+          _categoryColor =
+              (data['categoryColor'] as String?) ?? '#6C63FF';
+        });
+      }
+      return '';
+    });
+  }
+
+  /// 메인 창(windowId=0)으로 명령 전송
+  Future<void> _sendCommand(String cmd) async {
+    try {
+      await DesktopMultiWindow.invokeMethod(
+        0,
+        'mini_command',
+        jsonEncode({'cmd': cmd}),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _closeWindow() async {
+    await _sendCommand('mini_closed');
+    await windowManager.close();
+  }
+
+  Color _parseColor(String hex) {
+    try {
+      final h = hex.replaceAll('#', '');
+      return Color(int.parse('FF$h', radix: 16));
+    } catch (_) {
+      return const Color(0xFF6C63FF);
+    }
+  }
+
+  String get _elapsedText {
+    final hh = (_elapsed ~/ 3600).toString().padLeft(2, '0');
+    final mm = ((_elapsed % 3600) ~/ 60).toString().padLeft(2, '0');
+    final ss = (_elapsed % 60).toString().padLeft(2, '0');
+    return '$hh:$mm:$ss';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isIdle = _status == 'idle';
+    final isRunning = _status == 'running';
+    final catColor = _parseColor(_categoryColor);
+
+    // 미니 창 전용 반투명 다크 배경
+    const bgColor = Color(0xEE1E1E2E);
+    const onBg = Colors.white;
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: bgColor,
       body: GestureDetector(
         // 창 드래그 이동
         onPanStart: (_) => windowManager.startDragging(),
@@ -51,81 +101,80 @@ class MiniTimerScreen extends ConsumerWidget {
             child: Row(
               children: [
                 // 카테고리 색상 인디케이터
-                _CategoryDot(
-                  categoriesAsync: categoriesAsync,
-                  activeCategoryId: timerState.activeCategoryId,
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: isIdle
+                        ? onBg.withValues(alpha: 0.25)
+                        : catColor,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-                const SizedBox(width: 8),
-                // 카테고리명 + 경과시간
+                const SizedBox(width: 10),
+
+                // 카테고리명 + 경과 시간
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (categoryName != null)
+                      if (_categoryName != null)
                         Text(
-                          categoryName,
+                          _categoryName!,
                           style: TextStyle(
                             fontSize: 11,
-                            color: colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: onBg.withValues(alpha: 0.5),
                             height: 1.2,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       Text(
-                        timerState.isIdle ? '타이머 대기 중' : elapsedText,
+                        isIdle ? '타이머 대기 중' : _elapsedText,
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
                           fontFeatures: const [FontFeature.tabularFigures()],
-                          color: timerState.isRunning
-                              ? colorScheme.primary
-                              : colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: isRunning
+                              ? catColor
+                              : onBg.withValues(alpha: 0.40),
                           height: 1.2,
                         ),
                       ),
                     ],
                   ),
                 ),
-                // 컨트롤 버튼 영역
+
+                // 컨트롤 버튼
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (!timerState.isIdle) ...[
-                      // 일시정지/재개
+                    if (!isIdle) ...[
                       _MiniIconBtn(
-                        icon: timerState.isRunning
+                        icon: isRunning
                             ? Icons.pause_rounded
                             : Icons.play_arrow_rounded,
-                        color: colorScheme.primary,
-                        tooltip: timerState.isRunning ? '일시정지' : '재개',
-                        onTap: () {
-                          if (timerState.isRunning) {
-                            timerNotifier.pause();
-                          } else {
-                            timerNotifier.resume();
-                          }
-                        },
+                        color: catColor,
+                        tooltip: isRunning ? '일시정지' : '재개',
+                        onTap: () =>
+                            _sendCommand(isRunning ? 'pause' : 'resume'),
                       ),
                       const SizedBox(width: 4),
-                      // 정지
                       _MiniIconBtn(
                         icon: Icons.stop_rounded,
                         color: Colors.red.shade400,
                         tooltip: '정지',
-                        onTap: () async {
-                          await timerNotifier.stop();
-                        },
+                        onTap: () => _sendCommand('stop'),
                       ),
                       const SizedBox(width: 4),
                     ],
-                    // 원래 창으로 복귀
+                    // 닫기
                     _MiniIconBtn(
-                      icon: Icons.open_in_full_rounded,
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                      tooltip: '창 확장',
-                      onTap: () => _exitMiniMode(ref),
+                      icon: Icons.close_rounded,
+                      color: onBg.withValues(alpha: 0.40),
+                      tooltip: '미니 창 닫기',
+                      onTap: _closeWindow,
                     ),
                   ],
                 ),
@@ -136,55 +185,9 @@ class MiniTimerScreen extends ConsumerWidget {
       ),
     );
   }
-
-  Future<void> _exitMiniMode(WidgetRef ref) async {
-    await windowManager.setAlwaysOnTop(false);
-    await windowManager.setResizable(true);
-    await windowManager.setSize(const Size(1280, 720));
-    await windowManager.setMinimumSize(const Size(480, 400));
-    await windowManager.center();
-    ref.read(miniModeProvider.notifier).state = false;
-  }
 }
 
-// ── 카테고리 색상 점 ────────────────────────────
-
-class _CategoryDot extends StatelessWidget {
-  const _CategoryDot({
-    required this.categoriesAsync,
-    required this.activeCategoryId,
-  });
-
-  final AsyncValue<dynamic> categoriesAsync;
-  final int? activeCategoryId;
-
-  @override
-  Widget build(BuildContext context) {
-    Color dotColor = Theme.of(context).colorScheme.primary.withValues(alpha: 0.4);
-
-    categoriesAsync.whenData((cats) {
-      if (activeCategoryId != null) {
-        try {
-          final cat =
-              (cats as List).firstWhere((c) => c.id == activeCategoryId);
-          final hex = (cat.color as String).replaceAll('#', '');
-          dotColor = Color(int.parse('FF$hex', radix: 16));
-        } catch (_) {}
-      }
-    });
-
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: dotColor,
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-}
-
-// ── 미니 아이콘 버튼 ──────────────────────────────
+// ── 미니 아이콘 버튼 ───────────────────────────────
 
 class _MiniIconBtn extends StatelessWidget {
   const _MiniIconBtn({

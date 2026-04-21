@@ -17,6 +17,11 @@ class ShortcutRepository implements IShortcutRepository {
   }
 
   @override
+  Stream<List<Shortcut>> watchAll() {
+    return _db.select(_db.shortcuts).watch();
+  }
+
+  @override
   Future<Shortcut?> findById(int id) {
     return (_db.select(_db.shortcuts)..where((t) => t.id.equals(id)))
         .getSingleOrNull();

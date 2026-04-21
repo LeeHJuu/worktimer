@@ -14,3 +14,8 @@ final shortcutsByCategoryProvider =
     StreamProvider.family<List<Shortcut>, int>((ref, categoryId) {
   return ref.watch(shortcutRepositoryProvider).watchByCategory(categoryId);
 });
+
+/// 모든 바로가기 스트림 Provider (자동 타이머 매칭용)
+final allShortcutsProvider = StreamProvider<List<Shortcut>>((ref) {
+  return ref.watch(shortcutRepositoryProvider).watchAll();
+});

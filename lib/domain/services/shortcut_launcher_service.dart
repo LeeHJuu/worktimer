@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/database/app_database.dart';
+import 'shortcut_launch_result.dart';
+
+export 'shortcut_launch_result.dart';
 
 /// 바로가기 실행 서비스
 /// 웹 URL은 url_launcher, exe는 dart:io Process.run 사용
@@ -56,16 +59,3 @@ class ShortcutLauncherService {
   }
 }
 
-/// 바로가기 실행 결과
-class ShortcutLaunchResult {
-  const ShortcutLaunchResult._({required this.success, this.errorMessage});
-
-  factory ShortcutLaunchResult.success() =>
-      const ShortcutLaunchResult._(success: true);
-
-  factory ShortcutLaunchResult.failure(String message) =>
-      ShortcutLaunchResult._(success: false, errorMessage: message);
-
-  final bool success;
-  final String? errorMessage;
-}
