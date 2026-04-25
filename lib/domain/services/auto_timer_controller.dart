@@ -86,11 +86,14 @@ class AutoTimerController {
 
   Shortcut? _matchShortcut(String? exePath) {
     if (exePath == null || exePath.isEmpty) return null;
+    final activeCategoryId = _state.activeCategoryId;
+    if (activeCategoryId == null) return null;
+
     final normalizedFg = _normalizePath(exePath);
     final baseNameFg = _baseName(exePath).toLowerCase();
     final isBrowserFg = _browserExes.contains(baseNameFg);
 
-    for (final sc in _shortcuts) {
+    for (final sc in _shortcuts.where((s) => s.categoryId == activeCategoryId)) {
       if (sc.type == 'exe') {
         if (_normalizePath(sc.target) == normalizedFg) return sc;
       } else if (sc.type == 'web' && isBrowserFg) {
@@ -102,32 +105,15 @@ class AutoTimerController {
 
   void _apply(Shortcut? matched) {
     final state = _state;
+    if (state.isIdle) return;
 
-    // 등록된 앱이 포커스되지 않음 → 실행 중이면 pause
     if (matched == null) {
       if (state.isRunning) _timer.pause();
       return;
     }
 
-    final matchedCategoryId = matched.categoryId;
-
-    // 현재 활성 카테고리와 동일 → 일시정지 상태면 resume
-    if (state.activeCategoryId == matchedCategoryId) {
-      if (state.isPaused) _timer.start(matchedCategoryId);
-      return;
-    }
-
-    // 타이머가 idle 상태일 때만 autoStart로 새 카테고리 시작.
-    // 이미 타이머가 활성(running/paused)이면 카테고리를 강제 전환하지 않는다.
-    // → 수동으로 선택한 카테고리 타이머를 자동으로 덮어쓰는 버그를 방지.
-    if (state.isIdle) {
-      if (matched.autoStart) _timer.start(matchedCategoryId);
-      return;
-    }
-
-    // 다른 카테고리의 앱이 포커스됐지만 타이머가 이미 활성 상태:
-    // running이면 pause만 (카테고리 전환 없음).
-    if (state.isRunning) _timer.pause();
+    // matched는 항상 activeCategoryId 소속 — 일시정지 상태면 resume
+    if (state.isPaused) _timer.start(matched.categoryId);
   }
 
   String _normalizePath(String p) => p.replaceAll('/', '\\').toLowerCase();

@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
-import 'core/constants.dart';
 import 'core/theme.dart';
 import 'domain/services/timer_service.dart';
 import 'presentation/providers/auto_timer_provider.dart';
 import 'presentation/providers/database_provider.dart';
-import 'presentation/providers/settings_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/window_provider.dart';
 import 'presentation/screens/mini_timer/mini_timer_screen.dart';
@@ -103,16 +101,7 @@ class _AppInitializerState extends ConsumerState<_AppInitializer> {
     ref.read(appDatabaseProvider);
     await ref.read(timerServiceProvider.notifier).recoverOpenSessions();
 
-    // 자동 타이머 설정 로드 후 provider 에 반영 → AutoTimerController 인스턴스화
-    final settingsRepo = ref.read(settingsRepositoryProvider);
-    final autoTimerValue = await settingsRepo.get(
-      AppConstants.keyAutoTimerEnabled,
-      defaultValue: 'false',
-    );
-    ref.read(autoTimerEnabledProvider.notifier).state =
-        autoTimerValue == '1';
-
-    // 컨트롤러를 eager하게 생성 (listen이 fireImmediately: true 로 자동 enable/disable)
+    // 자동 타이머 컨트롤러 eager 생성 (항상 활성)
     ref.read(autoTimerControllerProvider);
 
     // 미니 타이머 IPC 브릿지 활성화
