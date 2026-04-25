@@ -18,4 +18,8 @@ class Shortcuts extends Table {
   /// 'web' | 'exe'
   TextColumn get type => text()();
   IntColumn get sortOrder => integer()();
+
+  /// 포커스 시 자동 시작 여부 (기본 true)
+  BoolColumn get autoStart =>
+      boolean().withDefault(const Constant(true))();
 }

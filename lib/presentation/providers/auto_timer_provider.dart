@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/services/auto_timer_controller.dart';
 import '../../domain/services/focus_watcher_service.dart';
-import 'category_provider.dart';
 import 'shortcut_provider.dart';
 
 /// 전역 자동 타이머 활성화 상태 (사용자가 설정에서 토글).
@@ -20,7 +19,6 @@ final autoTimerControllerProvider = Provider<AutoTimerController>((ref) {
   final controller = AutoTimerController(
     ref: ref,
     focusWatcher: ref.watch(focusWatcherProvider),
-    categoriesStream: ref.read(categoryRepositoryProvider).watchAll(),
     shortcutsStream: ref.read(shortcutRepositoryProvider).watchAll(),
   );
 

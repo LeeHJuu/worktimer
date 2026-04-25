@@ -1,12 +1,18 @@
 import 'dart:async';
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../data/database/app_database.dart';
 import '../../data/repositories/i_timer_repository.dart';
 import '../../data/repositories/timer_repository.dart';
 import '../../presentation/providers/database_provider.dart';
+import 'shortcut_launch_result.dart';
 import 'timer_state.dart';
 
+export 'shortcut_launch_result.dart';
 export 'timer_state.dart';
 
 // ─────────────────────────────────────────────
@@ -27,20 +33,28 @@ class TimerService extends Notifier<TimerState> {
 
   // ── 외부 API ──────────────────────────────
 
+  /// 바로가기 실행 + 해당 카테고리 타이머 시작 (원자적)
+  Future<ShortcutLaunchResult> launchAndStart(Shortcut shortcut) async {
+    final result = await _launch(shortcut);
+    if (result.success) await start(shortcut.categoryId);
+    return result;
+  }
+
+  /// 바로가기 실행만 (타이머 조작 없음)
+  Future<ShortcutLaunchResult> launch(Shortcut shortcut) => _launch(shortcut);
+
   /// 타이머 시작
-  /// - 일시정지 중 + 같은 카테고리 → resume()으로 이어가기
-  /// - 일시정지 중 + 다른 카테고리 → 기존 세션 종료 후 새 시작
+  /// - running + 같은 카테고리 → no-op
+  /// - paused  + 같은 카테고리 → resume
+  /// - running/paused + 다른 카테고리 → 기존 세션 종료 후 새 시작
   /// - idle → 새 세션 시작
   Future<void> start(int categoryId) async {
+    if (state.isRunning && state.activeCategoryId == categoryId) return;
     if (state.isPaused && state.activeCategoryId == categoryId) {
       resume();
       return;
     }
-    if (state.isPaused && state.activeCategoryId != categoryId) {
-      await stop();
-    }
-    if (state.isRunning) return;
-
+    if (!state.isIdle) await stop();
     await _startNormal(categoryId);
   }
 
@@ -93,6 +107,39 @@ class TimerService extends Notifier<TimerState> {
     }
   }
 
+  // ── 내부: 바로가기 실행 ───────────────────
+
+  Future<ShortcutLaunchResult> _launch(Shortcut shortcut) async {
+    try {
+      if (shortcut.type == 'web') return await _launchWeb(shortcut.target);
+      if (shortcut.type == 'exe') return await _launchExe(shortcut.target);
+      return ShortcutLaunchResult.failure('알 수 없는 타입: ${shortcut.type}');
+    } catch (e) {
+      return ShortcutLaunchResult.failure(e.toString());
+    }
+  }
+
+  Future<ShortcutLaunchResult> _launchWeb(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return ShortcutLaunchResult.failure('유효하지 않은 URL: $url');
+    if (!await canLaunchUrl(uri)) {
+      return ShortcutLaunchResult.failure('URL을 열 수 없습니다: $url');
+    }
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    return ShortcutLaunchResult.success();
+  }
+
+  Future<ShortcutLaunchResult> _launchExe(String exePath) async {
+    if (!Platform.isWindows) {
+      return ShortcutLaunchResult.failure('exe 실행은 Windows에서만 지원됩니다.');
+    }
+    if (!File(exePath).existsSync()) {
+      return ShortcutLaunchResult.failure('파일을 찾을 수 없습니다: $exePath');
+    }
+    await Process.start(exePath, [], runInShell: false);
+    return ShortcutLaunchResult.success();
+  }
+
   // ── 내부: 타이머 시작 ─────────────────────
 
   Future<void> _startNormal(int categoryId) async {
@@ -134,7 +181,6 @@ class TimerService extends Notifier<TimerState> {
   Future<void> _saveCurrentSession() async {
     final sessionId = state.activeSessionId;
     if (sessionId == null) return;
-
     final now = _nowTs();
     await _repo.endSession(
       id: sessionId,

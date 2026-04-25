@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../home/home_screen.dart';
 import '../manage/manage_screen.dart';
-import 'sidebar.dart';
+import 'sidebar/sidebar.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});

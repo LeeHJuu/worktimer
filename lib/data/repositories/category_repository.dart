@@ -47,9 +47,14 @@ class CategoryRepository implements ICategoryRepository {
 
   @override
   Future<void> delete(int id) async {
-    await (_db.delete(_db.categories)
-          ..where((t) => t.id.equals(id)))
-        .go();
+    await _db.transaction(() async {
+      await (_db.delete(_db.shortcuts)
+            ..where((t) => t.categoryId.equals(id)))
+          .go();
+      await (_db.delete(_db.categories)
+            ..where((t) => t.id.equals(id)))
+          .go();
+    });
   }
 
   @override

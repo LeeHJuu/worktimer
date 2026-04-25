@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants.dart';
 import '../../providers/auto_timer_provider.dart';
+import '../../providers/database_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/windows_integration_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -30,6 +32,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _weekdayCtrl.text = (await repo.getWeekdayHours()).toString();
     _weekendCtrl.text = (await repo.getWeekendHours()).toString();
     if (mounted) setState(() => _loaded = true);
+  }
+
+  Future<void> _resetAllData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('모든 데이터 초기화'),
+        content: const Text(
+          '타이머 세션, 컨디션 기록, 카테고리, 바로가기가 모두 삭제됩니다.\n'
+          '설정은 기본값으로 초기화됩니다.\n\n'
+          '이 작업은 되돌릴 수 없습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade400,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('초기화'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    await ref.read(appDatabaseProvider).resetAllData();
+    ref.read(autoTimerEnabledProvider.notifier).state = false;
+    await _loadSettings();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('모든 데이터가 초기화되었습니다.')),
+      );
+    }
   }
 
   Future<void> _save() async {
@@ -77,6 +118,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SectionTitle(title: '포커스 자동 타이머'),
               const SizedBox(height: 12),
               const _AutoTimerSection(),
+              const SizedBox(height: 32),
+
+              // ── 시스템 통합 ──
+              _SectionTitle(title: '시스템'),
+              const SizedBox(height: 12),
+              const _WindowsIntegrationSection(),
               const SizedBox(height: 32),
 
               // ── 가용 시간 ──
@@ -128,6 +175,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SectionTitle(title: '지원'),
               const SizedBox(height: 12),
               const _FeedbackSection(),
+              const SizedBox(height: 32),
+
+              // ── 위험 구역 ──
+              _SectionTitle(title: '위험 구역'),
+              const SizedBox(height: 12),
+              _ResetDataCard(onReset: _resetAllData),
             ],
           ),
         ),
@@ -464,6 +517,146 @@ class _SettingRow extends StatelessWidget {
             child: child,
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── 데이터 초기화 카드 ────────────────────────────────────────
+
+class _ResetDataCard extends StatelessWidget {
+  const _ResetDataCard({required this.onReset});
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '모든 데이터 초기화',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red.shade400,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '세션·컨디션·카테고리·바로가기가 전부 삭제되고 설정이 기본값으로 돌아갑니다.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            OutlinedButton.icon(
+              onPressed: onReset,
+              icon: const Icon(Icons.delete_forever_outlined, size: 16),
+              label: const Text('초기화'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red.shade400,
+                side: BorderSide(
+                    color: Colors.red.shade400.withValues(alpha: 0.5)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 시스템 통합 섹션 ──────────────────────────────────────────
+
+class _WindowsIntegrationSection extends ConsumerWidget {
+  const _WindowsIntegrationSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(windowsIntegrationProvider);
+    final notifier = ref.read(windowsIntegrationProvider.notifier);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (state.loading) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: Column(
+          children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(Icons.desktop_windows_outlined,
+                  size: 18, color: colorScheme.primary),
+              title: const Text('바탕화면 바로가기', style: TextStyle(fontSize: 13)),
+              subtitle: Text(
+                '바탕화면에 WorkTimer 바로가기를 만듭니다.',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+              value: state.desktopShortcut,
+              onChanged: (v) async {
+                try {
+                  await notifier.setDesktopShortcut(v);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('바로가기 생성 실패: $e')),
+                    );
+                  }
+                }
+              },
+            ),
+            const Divider(height: 1),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(Icons.rocket_launch_outlined,
+                  size: 18, color: colorScheme.primary),
+              title: const Text('시작 시 자동 실행', style: TextStyle(fontSize: 13)),
+              subtitle: Text(
+                'Windows 로그인 후 WorkTimer를 자동으로 실행합니다.',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+              value: state.startup,
+              onChanged: (v) async {
+                try {
+                  await notifier.setStartup(v);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('자동 실행 설정 실패: $e')),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

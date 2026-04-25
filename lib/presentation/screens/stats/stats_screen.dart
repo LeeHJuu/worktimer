@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/stats_provider.dart';
-import 'widgets/category_bar_chart.dart';
-import 'widgets/commission_summary.dart';
-import 'widgets/condition_avg_table.dart';
-import 'widgets/monthly_line_chart.dart';
-import 'widgets/monthly_week_chart.dart';
-import 'widgets/today_session_list.dart';
-import 'widgets/weekday_bar_chart.dart';
+import 'category_bar_chart.dart';
+import 'commission_summary.dart';
+import 'condition_avg_table/condition_avg_table.dart';
+import 'monthly_line_chart.dart';
+import 'monthly_week_chart.dart';
+import 'today_session_list.dart';
+import 'weekday_bar_chart.dart';
 
-export 'widgets/home_stats_views.dart';
+export 'home_stats_views/home_stats_views.dart';
 
 class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});

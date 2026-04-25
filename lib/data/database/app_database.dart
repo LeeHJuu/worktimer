@@ -27,7 +27,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -37,15 +37,29 @@ class AppDatabase extends _$AppDatabase {
         },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
-            // v2: TimerSessions에 memo 컬럼 추가
             await m.addColumn(timerSessions, timerSessions.memo);
           }
           if (from < 3) {
-            // v3: Categories에 auto_timer_on 컬럼 추가 (기본 false)
             await m.addColumn(categories, categories.autoTimerOn);
+          }
+          if (from < 4) {
+            // v4: Shortcuts에 auto_start 컬럼 추가 (기본 true)
+            await m.addColumn(shortcuts, shortcuts.autoStart);
           }
         },
       );
+
+  /// 모든 사용자 데이터를 삭제하고 설정을 기본값으로 초기화
+  Future<void> resetAllData() async {
+    await transaction(() async {
+      await delete(timerSessions).go();
+      await delete(conditionLogs).go();
+      await delete(shortcuts).go();
+      await delete(categories).go();
+      await delete(settings).go();
+      await _insertDefaultSettings();
+    });
+  }
 
   /// 기본 설정값 삽입
   Future<void> _insertDefaultSettings() async {

@@ -1,12 +1,11 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/database/app_database.dart';
 import '../../providers/category_provider.dart';
-import '../../providers/timer_provider.dart';
 import '../settings/settings_screen.dart';
-import 'widgets/category_dialog.dart';
-import 'widgets/category_list_panel.dart';
+import 'manage_controller.dart';
+import 'category_dialog.dart';
+import 'category_list_panel/category_list_panel.dart';
 
 const double _kCategoryPanelWidth = 520;
 const double _kSettingsPanelWidth = 420;
@@ -28,9 +27,8 @@ class _ManageScreenState extends ConsumerState<ManageScreen> {
       onAdd: () => _showCategoryDialog(context),
       onEdit: (cat) => _showCategoryDialog(context, existing: cat),
       onDelete: (cat) => _confirmDeleteCategory(context, cat),
-      onToggleVisible: (cat) => ref
-          .read(categoryRepositoryProvider)
-          .setVisible(cat.id, visible: !cat.isVisible),
+      onToggleVisible: (cat) =>
+          ref.read(manageControllerProvider).toggleCategoryVisible(cat),
       onResetSessions: (cat) => _confirmResetCategory(context, cat),
       onResetAll: () => _confirmResetAll(context),
     );
@@ -57,23 +55,8 @@ class _ManageScreenState extends ConsumerState<ManageScreen> {
       context: context,
       builder: (_) => CategoryDialog(
         existing: existing,
-        onSave: (companion) async {
-          final repo = ref.read(categoryRepositoryProvider);
-          if (existing == null) {
-            final categories =
-                ref.read(categoriesProvider).valueOrNull ?? [];
-            final nextOrder = categories.isEmpty
-                ? 0
-                : categories
-                        .map((c) => c.sortOrder)
-                        .reduce((a, b) => a > b ? a : b) +
-                    1;
-            await repo.insert(
-                companion.copyWith(sortOrder: Value(nextOrder)));
-          } else {
-            await repo.update(companion);
-          }
-        },
+        onSave: (companion) =>
+            ref.read(manageControllerProvider).saveCategory(companion),
       ),
     );
   }
@@ -102,7 +85,7 @@ class _ManageScreenState extends ConsumerState<ManageScreen> {
       ),
     );
     if (confirm == true) {
-      await ref.read(categoryRepositoryProvider).delete(cat.id);
+      await ref.read(manageControllerProvider).deleteCategory(cat.id);
     }
   }
 
@@ -131,7 +114,7 @@ class _ManageScreenState extends ConsumerState<ManageScreen> {
       ),
     );
     if (confirm == true) {
-      await ref.read(timerRepositoryProvider).deleteSessionsByCategory(cat.id);
+      await ref.read(manageControllerProvider).resetCategorySessions(cat.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('"${cat.name}" 기록이 초기화되었습니다.')),
@@ -152,8 +135,8 @@ class _ManageScreenState extends ConsumerState<ManageScreen> {
             child: const Text('취소'),
           ),
           ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade700),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.shade700),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('다음'),
           ),
@@ -175,8 +158,8 @@ class _ManageScreenState extends ConsumerState<ManageScreen> {
             child: const Text('취소'),
           ),
           ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red.shade800),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade800),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('전체 초기화'),
           ),
@@ -184,7 +167,7 @@ class _ManageScreenState extends ConsumerState<ManageScreen> {
       ),
     );
     if (step2 == true) {
-      await ref.read(timerRepositoryProvider).deleteAllSessions();
+      await ref.read(manageControllerProvider).resetAllSessions();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('모든 타이머 기록이 초기화되었습니다.')),

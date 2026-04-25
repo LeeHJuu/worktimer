@@ -807,6 +807,21 @@ class $ShortcutsTable extends Shortcuts
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _autoStartMeta = const VerificationMeta(
+    'autoStart',
+  );
+  @override
+  late final GeneratedColumn<bool> autoStart = GeneratedColumn<bool>(
+    'auto_start',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("auto_start" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -815,6 +830,7 @@ class $ShortcutsTable extends Shortcuts
     target,
     type,
     sortOrder,
+    autoStart,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -871,6 +887,12 @@ class $ShortcutsTable extends Shortcuts
     } else if (isInserting) {
       context.missing(_sortOrderMeta);
     }
+    if (data.containsKey('auto_start')) {
+      context.handle(
+        _autoStartMeta,
+        autoStart.isAcceptableOrUnknown(data['auto_start']!, _autoStartMeta),
+      );
+    }
     return context;
   }
 
@@ -904,6 +926,10 @@ class $ShortcutsTable extends Shortcuts
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
       )!,
+      autoStart: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}auto_start'],
+      )!,
     );
   }
 
@@ -926,6 +952,9 @@ class Shortcut extends DataClass implements Insertable<Shortcut> {
   /// 'web' | 'exe'
   final String type;
   final int sortOrder;
+
+  /// 포커스 시 자동 시작 여부 (기본 true)
+  final bool autoStart;
   const Shortcut({
     required this.id,
     required this.categoryId,
@@ -933,6 +962,7 @@ class Shortcut extends DataClass implements Insertable<Shortcut> {
     required this.target,
     required this.type,
     required this.sortOrder,
+    required this.autoStart,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -943,6 +973,7 @@ class Shortcut extends DataClass implements Insertable<Shortcut> {
     map['target'] = Variable<String>(target);
     map['type'] = Variable<String>(type);
     map['sort_order'] = Variable<int>(sortOrder);
+    map['auto_start'] = Variable<bool>(autoStart);
     return map;
   }
 
@@ -954,6 +985,7 @@ class Shortcut extends DataClass implements Insertable<Shortcut> {
       target: Value(target),
       type: Value(type),
       sortOrder: Value(sortOrder),
+      autoStart: Value(autoStart),
     );
   }
 
@@ -969,6 +1001,7 @@ class Shortcut extends DataClass implements Insertable<Shortcut> {
       target: serializer.fromJson<String>(json['target']),
       type: serializer.fromJson<String>(json['type']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      autoStart: serializer.fromJson<bool>(json['autoStart']),
     );
   }
   @override
@@ -981,6 +1014,7 @@ class Shortcut extends DataClass implements Insertable<Shortcut> {
       'target': serializer.toJson<String>(target),
       'type': serializer.toJson<String>(type),
       'sortOrder': serializer.toJson<int>(sortOrder),
+      'autoStart': serializer.toJson<bool>(autoStart),
     };
   }
 
@@ -991,6 +1025,7 @@ class Shortcut extends DataClass implements Insertable<Shortcut> {
     String? target,
     String? type,
     int? sortOrder,
+    bool? autoStart,
   }) => Shortcut(
     id: id ?? this.id,
     categoryId: categoryId ?? this.categoryId,
@@ -998,6 +1033,7 @@ class Shortcut extends DataClass implements Insertable<Shortcut> {
     target: target ?? this.target,
     type: type ?? this.type,
     sortOrder: sortOrder ?? this.sortOrder,
+    autoStart: autoStart ?? this.autoStart,
   );
   Shortcut copyWithCompanion(ShortcutsCompanion data) {
     return Shortcut(
@@ -1009,6 +1045,7 @@ class Shortcut extends DataClass implements Insertable<Shortcut> {
       target: data.target.present ? data.target.value : this.target,
       type: data.type.present ? data.type.value : this.type,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      autoStart: data.autoStart.present ? data.autoStart.value : this.autoStart,
     );
   }
 
@@ -1020,14 +1057,15 @@ class Shortcut extends DataClass implements Insertable<Shortcut> {
           ..write('name: $name, ')
           ..write('target: $target, ')
           ..write('type: $type, ')
-          ..write('sortOrder: $sortOrder')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('autoStart: $autoStart')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode =>
-      Object.hash(id, categoryId, name, target, type, sortOrder);
+      Object.hash(id, categoryId, name, target, type, sortOrder, autoStart);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1037,7 +1075,8 @@ class Shortcut extends DataClass implements Insertable<Shortcut> {
           other.name == this.name &&
           other.target == this.target &&
           other.type == this.type &&
-          other.sortOrder == this.sortOrder);
+          other.sortOrder == this.sortOrder &&
+          other.autoStart == this.autoStart);
 }
 
 class ShortcutsCompanion extends UpdateCompanion<Shortcut> {
@@ -1047,6 +1086,7 @@ class ShortcutsCompanion extends UpdateCompanion<Shortcut> {
   final Value<String> target;
   final Value<String> type;
   final Value<int> sortOrder;
+  final Value<bool> autoStart;
   const ShortcutsCompanion({
     this.id = const Value.absent(),
     this.categoryId = const Value.absent(),
@@ -1054,6 +1094,7 @@ class ShortcutsCompanion extends UpdateCompanion<Shortcut> {
     this.target = const Value.absent(),
     this.type = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.autoStart = const Value.absent(),
   });
   ShortcutsCompanion.insert({
     this.id = const Value.absent(),
@@ -1062,6 +1103,7 @@ class ShortcutsCompanion extends UpdateCompanion<Shortcut> {
     required String target,
     required String type,
     required int sortOrder,
+    this.autoStart = const Value.absent(),
   }) : categoryId = Value(categoryId),
        name = Value(name),
        target = Value(target),
@@ -1074,6 +1116,7 @@ class ShortcutsCompanion extends UpdateCompanion<Shortcut> {
     Expression<String>? target,
     Expression<String>? type,
     Expression<int>? sortOrder,
+    Expression<bool>? autoStart,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1082,6 +1125,7 @@ class ShortcutsCompanion extends UpdateCompanion<Shortcut> {
       if (target != null) 'target': target,
       if (type != null) 'type': type,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (autoStart != null) 'auto_start': autoStart,
     });
   }
 
@@ -1092,6 +1136,7 @@ class ShortcutsCompanion extends UpdateCompanion<Shortcut> {
     Value<String>? target,
     Value<String>? type,
     Value<int>? sortOrder,
+    Value<bool>? autoStart,
   }) {
     return ShortcutsCompanion(
       id: id ?? this.id,
@@ -1100,6 +1145,7 @@ class ShortcutsCompanion extends UpdateCompanion<Shortcut> {
       target: target ?? this.target,
       type: type ?? this.type,
       sortOrder: sortOrder ?? this.sortOrder,
+      autoStart: autoStart ?? this.autoStart,
     );
   }
 
@@ -1124,6 +1170,9 @@ class ShortcutsCompanion extends UpdateCompanion<Shortcut> {
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (autoStart.present) {
+      map['auto_start'] = Variable<bool>(autoStart.value);
+    }
     return map;
   }
 
@@ -1135,7 +1184,8 @@ class ShortcutsCompanion extends UpdateCompanion<Shortcut> {
           ..write('name: $name, ')
           ..write('target: $target, ')
           ..write('type: $type, ')
-          ..write('sortOrder: $sortOrder')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('autoStart: $autoStart')
           ..write(')'))
         .toString();
   }
@@ -2702,6 +2752,7 @@ typedef $$ShortcutsTableCreateCompanionBuilder =
       required String target,
       required String type,
       required int sortOrder,
+      Value<bool> autoStart,
     });
 typedef $$ShortcutsTableUpdateCompanionBuilder =
     ShortcutsCompanion Function({
@@ -2711,6 +2762,7 @@ typedef $$ShortcutsTableUpdateCompanionBuilder =
       Value<String> target,
       Value<String> type,
       Value<int> sortOrder,
+      Value<bool> autoStart,
     });
 
 final class $$ShortcutsTableReferences
@@ -2768,6 +2820,11 @@ class $$ShortcutsTableFilterComposer
 
   ColumnFilters<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get autoStart => $composableBuilder(
+    column: $table.autoStart,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2829,6 +2886,11 @@ class $$ShortcutsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get autoStart => $composableBuilder(
+    column: $table.autoStart,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CategoriesTableOrderingComposer get categoryId {
     final $$CategoriesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2876,6 +2938,9 @@ class $$ShortcutsTableAnnotationComposer
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<bool> get autoStart =>
+      $composableBuilder(column: $table.autoStart, builder: (column) => column);
 
   $$CategoriesTableAnnotationComposer get categoryId {
     final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
@@ -2935,6 +3000,7 @@ class $$ShortcutsTableTableManager
                 Value<String> target = const Value.absent(),
                 Value<String> type = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<bool> autoStart = const Value.absent(),
               }) => ShortcutsCompanion(
                 id: id,
                 categoryId: categoryId,
@@ -2942,6 +3008,7 @@ class $$ShortcutsTableTableManager
                 target: target,
                 type: type,
                 sortOrder: sortOrder,
+                autoStart: autoStart,
               ),
           createCompanionCallback:
               ({
@@ -2951,6 +3018,7 @@ class $$ShortcutsTableTableManager
                 required String target,
                 required String type,
                 required int sortOrder,
+                Value<bool> autoStart = const Value.absent(),
               }) => ShortcutsCompanion.insert(
                 id: id,
                 categoryId: categoryId,
@@ -2958,6 +3026,7 @@ class $$ShortcutsTableTableManager
                 target: target,
                 type: type,
                 sortOrder: sortOrder,
+                autoStart: autoStart,
               ),
           withReferenceMapper: (p0) => p0
               .map(

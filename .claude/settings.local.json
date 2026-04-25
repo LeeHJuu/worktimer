@@ -11,7 +11,19 @@
       "Bash(grep -v \"^$\")",
       "Bash(flutter pub *)",
       "Bash(export PATH=\"/c/flutter/bin:$PATH\")",
-      "Bash(dart run *)"
+      "Bash(dart run *)",
+      "Bash(sed -i \"s|import '../../../../|import '../../../../../|g\" condition_avg_data.dart)",
+      "Bash(sed -i \"s|import '../../../providers/|import '../../../../providers/|g\" condition_avg_data.dart)",
+      "Bash(sed -i \"s|import 'stats_helpers.dart'|import '../../stats_helpers.dart'|g\" condition_avg_data.dart)",
+      "Bash(sed -i \"s|import '../../../core/|import '../../../../core/|g\" sidebar.dart)",
+      "Bash(sed -i \"s|import '../../../data/|import '../../../../data/|g\" sidebar.dart)",
+      "Bash(sed -i \"s|import '../../../domain/|import '../../../../domain/|g\" sidebar.dart)",
+      "Bash(sed -i \"s|import '../../providers/|import '../../../providers/|g\" sidebar.dart)",
+      "Bash(sed -i \"s|import '../../../../|import '../../../../../|g\" timer_controls.dart)",
+      "Bash(sed -i \"s|import '../../../providers/|import '../../../../providers/|g\" timer_controls.dart)",
+      "Bash(sed -i \"s|import '../../../../|import '../../../|g\" overload_banner.dart)",
+      "Bash(sed -i \"s|import '../../../providers/|import '../../providers/|g\" overload_banner.dart)",
+      "Bash(dart analyze *)"
     ]
   }
 }
