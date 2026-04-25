@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
 import 'core/theme.dart';
 import 'domain/services/timer_service.dart';
@@ -9,6 +12,36 @@ import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/window_provider.dart';
 import 'presentation/screens/mini_timer/mini_timer_screen.dart';
 import 'presentation/screens/shared/app_shell.dart';
+
+const _kDefaultWindowSize = Size(1280, 720);
+
+Future<File> _windowPrefsFile() async {
+  final dir = await getApplicationSupportDirectory();
+  return File('${dir.path}/window_prefs.json');
+}
+
+Future<Size?> _loadSavedWindowSize() async {
+  try {
+    final file = await _windowPrefsFile();
+    if (!file.existsSync()) return null;
+    final data = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    return Size(
+      (data['width'] as num).toDouble(),
+      (data['height'] as num).toDouble(),
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<void> _saveWindowSize(Size size) async {
+  try {
+    final file = await _windowPrefsFile();
+    await file.writeAsString(
+      jsonEncode({'width': size.width, 'height': size.height}),
+    );
+  } catch (_) {}
+}
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,10 +54,11 @@ void main(List<String> args) async {
 
   // ── 메인 창 ────────────────────────────────────────
   await windowManager.ensureInitialized();
-  const windowOptions = WindowOptions(
-    size: Size(1280, 720),
-    minimumSize: Size(480, 400),
-    center: true,
+  final savedSize = await _loadSavedWindowSize();
+  final windowOptions = WindowOptions(
+    size: savedSize ?? _kDefaultWindowSize,
+    minimumSize: const Size(480, 400),
+    center: savedSize == null, // 최초 실행 시에만 중앙 배치
     title: 'WorkTimer',
   );
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -88,13 +122,27 @@ class _AppInitializer extends ConsumerStatefulWidget {
   ConsumerState<_AppInitializer> createState() => _AppInitializerState();
 }
 
-class _AppInitializerState extends ConsumerState<_AppInitializer> {
+class _AppInitializerState extends ConsumerState<_AppInitializer>
+    with WindowListener {
   bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
+    windowManager.addListener(this);
     _initialize();
+  }
+
+  @override
+  void dispose() {
+    windowManager.removeListener(this);
+    super.dispose();
+  }
+
+  @override
+  void onWindowResized() async {
+    final size = await windowManager.getSize();
+    await _saveWindowSize(size);
   }
 
   Future<void> _initialize() async {
