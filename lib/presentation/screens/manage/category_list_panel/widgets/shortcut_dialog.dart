@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import '../../../../../data/database/app_database.dart';
+import '../../../../../domain/services/installed_apps_service.dart';
+import 'app_picker_dialog.dart';
 import 'shortcut_type_chip.dart';
 
 class ShortcutDialog extends StatefulWidget {
@@ -25,6 +28,7 @@ class _ShortcutDialogState extends State<ShortcutDialog> {
   String _type = 'web';
   bool _autoStart = true;
   bool _saving = false;
+  bool _isNormalizingText = false;
 
   @override
   void initState() {
@@ -35,13 +39,58 @@ class _ShortcutDialogState extends State<ShortcutDialog> {
       _type = widget.existing!.type;
       _autoStart = widget.existing!.autoStart;
     }
+    _targetCtrl.addListener(_onTargetChanged);
   }
 
   @override
   void dispose() {
+    _targetCtrl.removeListener(_onTargetChanged);
     _nameCtrl.dispose();
     _targetCtrl.dispose();
     super.dispose();
+  }
+
+  void _onTargetChanged() {
+    if (_isNormalizingText) return;
+    final raw = _targetCtrl.text;
+    final stripped = _stripQuotes(raw);
+    if (stripped != raw) {
+      _isNormalizingText = true;
+      _targetCtrl.text = stripped;
+      _targetCtrl.selection =
+          TextSelection.collapsed(offset: stripped.length);
+      _isNormalizingText = false;
+    }
+    _autoDetectType(stripped);
+  }
+
+  String _stripQuotes(String s) {
+    if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
+      return s.substring(1, s.length - 1);
+    }
+    return s;
+  }
+
+  void _autoDetectType(String text) {
+    final t = text.trim();
+    if (t.startsWith('http://') || t.startsWith('https://')) {
+      if (_type != 'web') setState(() => _type = 'web');
+    } else if (t.toLowerCase().endsWith('.exe')) {
+      if (_type != 'exe') setState(() => _type = 'exe');
+    }
+  }
+
+  Future<void> _pickApp() async {
+    final app = await showDialog<InstalledApp>(
+      context: context,
+      builder: (_) => const AppPickerDialog(),
+    );
+    if (app == null) return;
+    setState(() {
+      _nameCtrl.text = app.name;
+      _targetCtrl.text = app.path;
+      _type = 'exe';
+    });
   }
 
   @override
@@ -72,6 +121,19 @@ class _ShortcutDialogState extends State<ShortcutDialog> {
                 ),
               ],
             ),
+            if (_type == 'exe' && Platform.isWindows) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _pickApp,
+                icon: const Icon(Icons.search, size: 14),
+                label: const Text('앱 선택'),
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  textStyle: const TextStyle(fontSize: 13),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             TextField(
               controller: _nameCtrl,
