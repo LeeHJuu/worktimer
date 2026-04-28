@@ -3,7 +3,7 @@ name: Release Windows
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: write
@@ -55,43 +55,7 @@ jobs:
           ZIP: ${{ steps.zip.outputs.zip }}
         run: |
           export URL="https://github.com/leehjuu/worktimer/releases/download/${TAG}/${ZIP}"
-
-          python3 - <<'PYEOF'
-import xml.etree.ElementTree as ET, os
-from datetime import datetime, timezone
-
-SPARKLE = 'http://www.andymatuschak.org/xml-namespaces/sparkle'
-ET.register_namespace('sparkle', SPARKLE)
-
-version = os.environ['VERSION']
-url     = os.environ['URL']
-zip_    = os.environ['ZIP']
-date    = datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S +0000')
-size    = str(os.path.getsize(zip_))
-
-tree = ET.parse('appcast.xml')
-root = tree.getroot()
-channel = root.find('channel')
-
-item = ET.Element('item')
-ET.SubElement(item, 'title').text = f'Version {version}'
-ET.SubElement(item, f'{{{SPARKLE}}}shortVersionString').text = version
-ET.SubElement(item, f'{{{SPARKLE}}}os').text = 'windows'
-ET.SubElement(item, 'description').text = 'GitHub Releases 페이지에서 변경사항을 확인하세요.'
-ET.SubElement(item, 'pubDate').text = date
-enc = ET.SubElement(item, 'enclosure')
-enc.set('url', url)
-enc.set('type', 'application/octet-stream')
-enc.set('length', size)
-
-first_item = channel.find('item')
-if first_item is not None:
-    channel.insert(list(channel).index(first_item), item)
-else:
-    channel.append(item)
-
-tree.write('appcast.xml', encoding='unicode', xml_declaration=True)
-PYEOF
+          python3 scripts/update_appcast.py
 
       - name: Commit appcast.xml
         shell: bash
