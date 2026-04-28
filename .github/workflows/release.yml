@@ -1,0 +1,110 @@
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Parse version
+        id: ver
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build Windows
+        run: |
+          flutter build windows --release `
+            --build-name="${{ steps.ver.outputs.version }}" `
+            --build-number="${{ github.run_number }}"
+
+      - name: Create ZIP
+        id: zip
+        shell: pwsh
+        run: |
+          $zip = "WorkTimer-Windows-${{ steps.ver.outputs.version }}.zip"
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath $zip
+          "zip=$zip" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Update appcast.xml
+        shell: bash
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          ZIP: ${{ steps.zip.outputs.zip }}
+        run: |
+          export URL="https://github.com/leehjuu/worktimer/releases/download/${TAG}/${ZIP}"
+
+          python3 - <<'PYEOF'
+import xml.etree.ElementTree as ET, os
+from datetime import datetime, timezone
+
+SPARKLE = 'http://www.andymatuschak.org/xml-namespaces/sparkle'
+ET.register_namespace('sparkle', SPARKLE)
+
+version = os.environ['VERSION']
+url     = os.environ['URL']
+zip_    = os.environ['ZIP']
+date    = datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S +0000')
+size    = str(os.path.getsize(zip_))
+
+tree = ET.parse('appcast.xml')
+root = tree.getroot()
+channel = root.find('channel')
+
+item = ET.Element('item')
+ET.SubElement(item, 'title').text = f'Version {version}'
+ET.SubElement(item, f'{{{SPARKLE}}}shortVersionString').text = version
+ET.SubElement(item, f'{{{SPARKLE}}}os').text = 'windows'
+ET.SubElement(item, 'description').text = 'GitHub Releases 페이지에서 변경사항을 확인하세요.'
+ET.SubElement(item, 'pubDate').text = date
+enc = ET.SubElement(item, 'enclosure')
+enc.set('url', url)
+enc.set('type', 'application/octet-stream')
+enc.set('length', size)
+
+first_item = channel.find('item')
+if first_item is not None:
+    channel.insert(list(channel).index(first_item), item)
+else:
+    channel.append(item)
+
+tree.write('appcast.xml', encoding='unicode', xml_declaration=True)
+PYEOF
+
+      - name: Commit appcast.xml
+        shell: bash
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml
+          git commit -m "chore: update appcast for ${{ steps.ver.outputs.tag }}"
+          git push origin HEAD:main
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "WorkTimer ${{ steps.ver.outputs.version }}"
+          generate_release_notes: true
+          files: ${{ steps.zip.outputs.zip }}
