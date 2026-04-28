@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +8,7 @@ import '../../data/database/app_database.dart';
 import '../../data/repositories/i_timer_repository.dart';
 import '../../data/repositories/timer_repository.dart';
 import '../../presentation/providers/database_provider.dart';
+import '../../presentation/providers/platform_integration_provider.dart';
 import 'shortcut_launch_result.dart';
 import 'timer_state.dart';
 
@@ -112,7 +112,11 @@ class TimerService extends Notifier<TimerState> {
   Future<ShortcutLaunchResult> _launch(Shortcut shortcut) async {
     try {
       if (shortcut.type == 'web') return await _launchWeb(shortcut.target);
-      if (shortcut.type == 'exe') return await _launchExe(shortcut.target);
+      if (shortcut.type == 'app') {
+        return await ref
+            .read(platformIntegrationServiceProvider)
+            .launchApp(shortcut.target);
+      }
       return ShortcutLaunchResult.failure('알 수 없는 타입: ${shortcut.type}');
     } catch (e) {
       return ShortcutLaunchResult.failure(e.toString());
@@ -126,17 +130,6 @@ class TimerService extends Notifier<TimerState> {
       return ShortcutLaunchResult.failure('URL을 열 수 없습니다: $url');
     }
     await launchUrl(uri, mode: LaunchMode.externalApplication);
-    return ShortcutLaunchResult.success();
-  }
-
-  Future<ShortcutLaunchResult> _launchExe(String exePath) async {
-    if (!Platform.isWindows) {
-      return ShortcutLaunchResult.failure('exe 실행은 Windows에서만 지원됩니다.');
-    }
-    if (!File(exePath).existsSync()) {
-      return ShortcutLaunchResult.failure('파일을 찾을 수 없습니다: $exePath');
-    }
-    await Process.start(exePath, [], runInShell: false);
     return ShortcutLaunchResult.success();
   }
 

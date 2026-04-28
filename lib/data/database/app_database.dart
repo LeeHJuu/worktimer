@@ -27,7 +27,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -45,6 +45,13 @@ class AppDatabase extends _$AppDatabase {
           if (from < 4) {
             // v4: Shortcuts에 auto_start 컬럼 추가 (기본 true)
             await m.addColumn(shortcuts, shortcuts.autoStart);
+          }
+          if (from < 5) {
+            // v5: type='exe' 값을 OS 중립적인 'app'으로 일반화.
+            //     향후 macOS .app도 동일 'app' 타입으로 처리.
+            await m.database.customStatement(
+              "UPDATE shortcuts SET type = 'app' WHERE type = 'exe'",
+            );
           }
         },
       );

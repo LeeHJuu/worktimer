@@ -1,12 +1,14 @@
-import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../core/platform/capability.dart';
 import '../../../../../data/database/app_database.dart';
-import '../../../../../domain/services/installed_apps_service.dart';
+import '../../../../../domain/services/platform/installed_app.dart';
+import '../../../../providers/capability_provider.dart';
 import 'app_picker_dialog.dart';
 import 'shortcut_type_chip.dart';
 
-class ShortcutDialog extends StatefulWidget {
+class ShortcutDialog extends ConsumerStatefulWidget {
   const ShortcutDialog({
     super.key,
     required this.categoryId,
@@ -19,10 +21,10 @@ class ShortcutDialog extends StatefulWidget {
   final Future<void> Function(ShortcutsCompanion companion) onSave;
 
   @override
-  State<ShortcutDialog> createState() => _ShortcutDialogState();
+  ConsumerState<ShortcutDialog> createState() => _ShortcutDialogState();
 }
 
-class _ShortcutDialogState extends State<ShortcutDialog> {
+class _ShortcutDialogState extends ConsumerState<ShortcutDialog> {
   final _nameCtrl = TextEditingController();
   final _targetCtrl = TextEditingController();
   String _type = 'web';
@@ -36,7 +38,7 @@ class _ShortcutDialogState extends State<ShortcutDialog> {
     if (widget.existing != null) {
       _nameCtrl.text = widget.existing!.name;
       _targetCtrl.text = widget.existing!.target;
-      _type = widget.existing!.type;
+      _type = _normalizeType(widget.existing!.type);
       _autoStart = widget.existing!.autoStart;
     }
     _targetCtrl.addListener(_onTargetChanged);
@@ -49,6 +51,9 @@ class _ShortcutDialogState extends State<ShortcutDialog> {
     _targetCtrl.dispose();
     super.dispose();
   }
+
+  /// 구버전(v4 이하) 데이터 'exe' 값을 안전하게 'app'으로 정규화.
+  String _normalizeType(String raw) => raw == 'exe' ? 'app' : raw;
 
   void _onTargetChanged() {
     if (_isNormalizingText) return;
@@ -73,10 +78,11 @@ class _ShortcutDialogState extends State<ShortcutDialog> {
 
   void _autoDetectType(String text) {
     final t = text.trim();
+    final canApp = ref.read(capabilityProvider(Capability.appLaunch));
     if (t.startsWith('http://') || t.startsWith('https://')) {
       if (_type != 'web') setState(() => _type = 'web');
-    } else if (t.toLowerCase().endsWith('.exe')) {
-      if (_type != 'exe') setState(() => _type = 'exe');
+    } else if (canApp && t.toLowerCase().endsWith('.exe')) {
+      if (_type != 'app') setState(() => _type = 'app');
     }
   }
 
@@ -89,13 +95,22 @@ class _ShortcutDialogState extends State<ShortcutDialog> {
     setState(() {
       _nameCtrl.text = app.name;
       _targetCtrl.text = app.path;
-      _type = 'exe';
+      _type = 'app';
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.existing != null;
+    final canApp = ref.watch(capabilityProvider(Capability.appLaunch));
+    final canPicker =
+        ref.watch(capabilityProvider(Capability.installedAppsPicker));
+
+    // 비지원 플랫폼에서 'app' 타입이 잡혀 있으면 web으로 강제
+    if (!canApp && _type == 'app') {
+      _type = 'web';
+    }
+
     return AlertDialog(
       title: Text(isEdit ? '바로가기 편집' : '바로가기 추가'),
       content: SizedBox(
@@ -112,16 +127,18 @@ class _ShortcutDialogState extends State<ShortcutDialog> {
                   selected: _type == 'web',
                   onTap: () => setState(() => _type = 'web'),
                 ),
-                const SizedBox(width: 8),
-                ShortcutTypeChip(
-                  label: 'exe 파일',
-                  icon: Icons.apps_outlined,
-                  selected: _type == 'exe',
-                  onTap: () => setState(() => _type = 'exe'),
-                ),
+                if (canApp) ...[
+                  const SizedBox(width: 8),
+                  ShortcutTypeChip(
+                    label: '앱',
+                    icon: Icons.apps_outlined,
+                    selected: _type == 'app',
+                    onTap: () => setState(() => _type = 'app'),
+                  ),
+                ],
               ],
             ),
-            if (_type == 'exe' && Platform.isWindows) ...[
+            if (_type == 'app' && canPicker) ...[
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 onPressed: _pickApp,
@@ -148,7 +165,7 @@ class _ShortcutDialogState extends State<ShortcutDialog> {
             TextField(
               controller: _targetCtrl,
               decoration: InputDecoration(
-                labelText: _type == 'web' ? 'URL (https://...)' : 'exe 파일 경로',
+                labelText: _type == 'web' ? 'URL (https://...)' : '앱 실행파일 경로',
                 border: const OutlineInputBorder(),
                 isDense: true,
                 hintText: _type == 'web'

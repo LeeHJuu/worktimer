@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
+import 'core/platform/capability.dart';
+import 'core/platform/capability_registry.dart';
 import 'core/theme.dart';
 import 'domain/services/timer_service.dart';
 import 'presentation/providers/auto_timer_provider.dart';
@@ -49,7 +51,8 @@ void main(List<String> args) async {
 
   // ── 서브윈도우 (미니 타이머) 진입점 ────────────────
   if (args.firstOrNull == 'multi_window') {
-    await _runMiniWindow();
+    final platform = _parseMiniArgsPlatform(args);
+    await _runMiniWindow(platform);
     return;
   }
 
@@ -73,8 +76,30 @@ void main(List<String> args) async {
   );
 }
 
+/// 미니 타이머 서브윈도우 args에서 platform 추출.
+///
+/// `desktop_multi_window`는 sub-process 호출 시 args를
+/// `['multi_window', '<windowId>', '<userArgsJson>']` 형태로 전달한다.
+/// userArgsJson은 메인 창이 createWindow에 넘긴 문자열.
+PlatformId _parseMiniArgsPlatform(List<String> args) {
+  if (args.length < 3) return currentPlatform();
+  try {
+    final raw = args[2];
+    final data = jsonDecode(raw);
+    if (data is Map<String, dynamic>) {
+      final name = data['platform'] as String?;
+      if (name != null) {
+        for (final p in PlatformId.values) {
+          if (p.name == name) return p;
+        }
+      }
+    }
+  } catch (_) {}
+  return currentPlatform();
+}
+
 /// 미니 타이머 서브윈도우 초기화
-Future<void> _runMiniWindow() async {
+Future<void> _runMiniWindow(PlatformId platform) async {
   await windowManager.ensureInitialized();
   await windowManager.waitUntilReadyToShow(
     const WindowOptions(
@@ -89,11 +114,11 @@ Future<void> _runMiniWindow() async {
     },
   );
   runApp(
-    const MaterialApp(
+    MaterialApp(
       debugShowCheckedModeBanner: false,
       // 미니 창은 별도 프로세스이므로 ProviderScope 없이 동작
       // 타이머 상태는 IPC(desktop_multi_window)로 메인 창에서 수신
-      home: MiniTimerScreen(),
+      home: MiniTimerScreen(platform: platform),
     ),
   );
 }
@@ -115,7 +140,7 @@ class _WorkTimerAppState extends ConsumerState<WorkTimerApp> {
       storeController: UpgraderAppcastStoreController(
         appcastConfig: AppcastConfiguration(
           url: 'https://raw.githubusercontent.com/leehjuu/worktimer/main/appcast.xml',
-          supportedOS: ['windows'],
+          supportedOS: supportedPlatformNames(Capability.appUpdater),
         ),
       ),
     );

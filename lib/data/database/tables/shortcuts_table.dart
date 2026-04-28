@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 import 'categories_table.dart';
 
 /// 바로가기 테이블
-/// 각 카테고리에 연결된 웹 URL 또는 exe 경로
+/// 각 카테고리에 연결된 웹 URL 또는 네이티브 앱 실행파일 경로
 class Shortcuts extends Table {
   IntColumn get id => integer().autoIncrement()();
 
@@ -12,10 +12,13 @@ class Shortcuts extends Table {
 
   TextColumn get name => text()();
 
-  /// URL 또는 exe 절대경로
+  /// URL 또는 네이티브 실행파일 절대경로 (Windows .exe / 향후 macOS .app)
   TextColumn get target => text()();
 
-  /// 'web' | 'exe'
+  /// [allowedShortcutTypes] 중 하나 — 'web' | 'app'.
+  ///
+  /// 'app'은 현재 OS의 네이티브 실행파일을 의미. v5 마이그레이션에서
+  /// 기존 'exe' 값은 모두 'app'으로 일괄 변환됨.
   TextColumn get type => text()();
   IntColumn get sortOrder => integer()();
 
@@ -23,3 +26,6 @@ class Shortcuts extends Table {
   BoolColumn get autoStart =>
       boolean().withDefault(const Constant(true))();
 }
+
+/// 허용 가능한 [Shortcuts.type] 값 — 신규 데이터 입력 시 이 셋 안의 값만 사용.
+const allowedShortcutTypes = {'web', 'app'};
