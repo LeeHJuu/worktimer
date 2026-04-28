@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
-import 'core/platform/capability.dart';
+import 'core/platform/capability.dart' show PlatformId;
 import 'core/platform/capability_registry.dart';
 import 'core/theme.dart';
 import 'domain/services/timer_service.dart';
@@ -137,10 +137,9 @@ class _WorkTimerAppState extends ConsumerState<WorkTimerApp> {
   void initState() {
     super.initState();
     _upgrader = Upgrader(
-      storeController: UpgraderAppcastStoreController(
-        appcastConfig: AppcastConfiguration(
-          url: 'https://raw.githubusercontent.com/leehjuu/worktimer/main/appcast.xml',
-          supportedOS: supportedPlatformNames(Capability.appUpdater),
+      storeController: UpgraderStoreController(
+        onWindows: () => UpgraderAppcastStore(
+          appcastURL: 'https://raw.githubusercontent.com/leehjuu/worktimer/main/appcast.xml',
         ),
       ),
     );
