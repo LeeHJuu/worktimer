@@ -41,6 +41,8 @@ dependencies:
   path_provider: ^2.1.5
   path: ^1.9.1
   url_launcher: ^6.3.2
+  upgrader: ^11.4.0
+  package_info_plus: ^8.3.0
   flutter_colorpicker: ^1.1.0
   fl_chart: ^1.2.0
   window_manager: ^0.4.3

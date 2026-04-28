@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:upgrader/upgrader.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
 import 'core/theme.dart';
@@ -97,11 +98,31 @@ Future<void> _runMiniWindow() async {
   );
 }
 
-class WorkTimerApp extends ConsumerWidget {
+class WorkTimerApp extends ConsumerStatefulWidget {
   const WorkTimerApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WorkTimerApp> createState() => _WorkTimerAppState();
+}
+
+class _WorkTimerAppState extends ConsumerState<WorkTimerApp> {
+  late final Upgrader _upgrader;
+
+  @override
+  void initState() {
+    super.initState();
+    _upgrader = Upgrader(
+      storeController: UpgraderAppcastStoreController(
+        appcastConfig: AppcastConfiguration(
+          url: 'https://raw.githubusercontent.com/leehjuu/worktimer/main/appcast.xml',
+          supportedOS: ['macos'],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeConfig = ref.watch(themeProvider);
     final themeData = AppTheme.buildTheme(themeConfig);
 
@@ -109,7 +130,10 @@ class WorkTimerApp extends ConsumerWidget {
       title: 'WorkTimer',
       debugShowCheckedModeBanner: false,
       theme: themeData,
-      home: const _AppInitializer(),
+      home: UpgradeAlert(
+        upgrader: _upgrader,
+        child: const _AppInitializer(),
+      ),
     );
   }
 }

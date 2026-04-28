@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>WorkTimer</title>
+    <item>
+      <title>Version 1.0.0</title>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <sparkle:os>macos</sparkle:os>
+      <description>초기 릴리즈</description>
+      <pubDate>Tue, 28 Apr 2026 00:00:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/leehjuu/worktimer/releases/download/v1.0.0/WorkTimer-macOS-1.0.0.zip"
+        type="application/octet-stream"
+        length="0"/>
+    </item>
+  </channel>
+</rss>
