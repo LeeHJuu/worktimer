@@ -2,7 +2,7 @@
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
   <channel>
     <title>WorkTimer</title>
-    <item><title>Version 0.0.1</title><sparkle:shortVersionString>0.0.1</sparkle:shortVersionString><sparkle:os>windows</sparkle:os><description>GitHub Releases 페이지에서 변경사항을 확인하세요.</description><pubDate>Tue, 28 Apr 2026 12:51:01 +0000</pubDate><enclosure url="https://github.com/leehjuu/worktimer/releases/download/v0.0.1/WorkTimer-Windows-0.0.1.zip" type="application/octet-stream" length="14585209" /></item><item>
+    <item><title>Version 1.0.0</title><sparkle:shortVersionString>1.0.0</sparkle:shortVersionString><sparkle:os>windows</sparkle:os><description>GitHub Releases 페이지에서 변경사항을 확인하세요.</description><pubDate>Tue, 28 Apr 2026 13:35:33 +0000</pubDate><enclosure url="https://github.com/leehjuu/worktimer/releases/download/v1.0.0/WorkTimer-Windows-1.0.0.zip" type="application/octet-stream" length="14585215" /></item><item><title>Version 0.0.1</title><sparkle:shortVersionString>0.0.1</sparkle:shortVersionString><sparkle:os>windows</sparkle:os><description>GitHub Releases 페이지에서 변경사항을 확인하세요.</description><pubDate>Tue, 28 Apr 2026 12:51:01 +0000</pubDate><enclosure url="https://github.com/leehjuu/worktimer/releases/download/v0.0.1/WorkTimer-Windows-0.0.1.zip" type="application/octet-stream" length="14585209" /></item><item>
       <title>Version 1.0.0</title>
       <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
       <sparkle:os>windows</sparkle:os>
