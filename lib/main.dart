@@ -115,7 +115,7 @@ class _WorkTimerAppState extends ConsumerState<WorkTimerApp> {
       storeController: UpgraderAppcastStoreController(
         appcastConfig: AppcastConfiguration(
           url: 'https://raw.githubusercontent.com/leehjuu/worktimer/main/appcast.xml',
-          supportedOS: ['macos'],
+          supportedOS: ['windows'],
         ),
       ),
     );

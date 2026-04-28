@@ -1,4 +1,4 @@
-name: Release macOS
+name: Release Windows
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-and-release:
-    runs-on: macos-latest
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -19,6 +19,7 @@ jobs:
 
       - name: Parse version
         id: ver
+        shell: bash
         run: |
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
@@ -32,55 +33,60 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Build macOS
+      - name: Build Windows
         run: |
-          flutter build macos --release \
-            --build-name="${{ steps.ver.outputs.version }}" \
+          flutter build windows --release `
+            --build-name="${{ steps.ver.outputs.version }}" `
             --build-number="${{ github.run_number }}"
 
       - name: Create ZIP
         id: zip
+        shell: pwsh
         run: |
-          ZIP="WorkTimer-macOS-${{ steps.ver.outputs.version }}.zip"
-          ditto -c -k --keepParent \
-            "build/macos/Build/Products/Release/worktimer.app" \
-            "$ZIP"
-          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+          $zip = "WorkTimer-Windows-${{ steps.ver.outputs.version }}.zip"
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath $zip
+          "zip=$zip" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Update appcast.xml
+        shell: bash
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          ZIP: ${{ steps.zip.outputs.zip }}
         run: |
-          VERSION="${{ steps.ver.outputs.version }}"
-          TAG="${{ steps.ver.outputs.tag }}"
-          ZIP="${{ steps.zip.outputs.zip }}"
-          DATE=$(date -u "+%a, %d %b %Y %H:%M:%S +0000")
-          SIZE=$(stat -f%z "$ZIP")
-          URL="https://github.com/leehjuu/worktimer/releases/download/${TAG}/${ZIP}"
+          export URL="https://github.com/leehjuu/worktimer/releases/download/${TAG}/${ZIP}"
 
-          python3 - <<PYEOF
-import xml.etree.ElementTree as ET
+          python3 - <<'PYEOF'
+import xml.etree.ElementTree as ET, os
+from datetime import datetime, timezone
 
 SPARKLE = 'http://www.andymatuschak.org/xml-namespaces/sparkle'
 ET.register_namespace('sparkle', SPARKLE)
+
+version = os.environ['VERSION']
+url     = os.environ['URL']
+zip_    = os.environ['ZIP']
+date    = datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S +0000')
+size    = str(os.path.getsize(zip_))
 
 tree = ET.parse('appcast.xml')
 root = tree.getroot()
 channel = root.find('channel')
 
 item = ET.Element('item')
-ET.SubElement(item, 'title').text = 'Version $VERSION'
-ET.SubElement(item, f'{{{SPARKLE}}}shortVersionString').text = '$VERSION'
-ET.SubElement(item, f'{{{SPARKLE}}}os').text = 'macos'
+ET.SubElement(item, 'title').text = f'Version {version}'
+ET.SubElement(item, f'{{{SPARKLE}}}shortVersionString').text = version
+ET.SubElement(item, f'{{{SPARKLE}}}os').text = 'windows'
 ET.SubElement(item, 'description').text = 'GitHub Releases 페이지에서 변경사항을 확인하세요.'
-ET.SubElement(item, 'pubDate').text = '$DATE'
+ET.SubElement(item, 'pubDate').text = date
 enc = ET.SubElement(item, 'enclosure')
-enc.set('url', '$URL')
+enc.set('url', url)
 enc.set('type', 'application/octet-stream')
-enc.set('length', '$SIZE')
+enc.set('length', size)
 
 first_item = channel.find('item')
 if first_item is not None:
-    idx = list(channel).index(first_item)
-    channel.insert(idx, item)
+    channel.insert(list(channel).index(first_item), item)
 else:
     channel.append(item)
 
@@ -88,6 +94,7 @@ tree.write('appcast.xml', encoding='unicode', xml_declaration=True)
 PYEOF
 
       - name: Commit appcast.xml
+        shell: bash
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
