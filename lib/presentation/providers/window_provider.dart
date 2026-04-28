@@ -1,11 +1,12 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/platform/capability.dart';
 import '../../data/database/app_database.dart';
 import '../../domain/services/timer_service.dart';
+import 'capability_provider.dart';
 import 'category_provider.dart';
 import 'timer_provider.dart';
 
@@ -18,8 +19,11 @@ final miniWindowIdProvider = StateProvider<int?>((ref) => null);
 ///  1. `DesktopMultiWindow.setMethodHandler` 로 미니 창 → 메인 창 명령(pause/resume/stop/mini_closed) 처리.
 ///  2. `timerServiceProvider` 변경 시 미니 창으로 timer_update 전송.
 ///  3. 미니 창이 새로 열리면(`miniWindowIdProvider` null→값) 현재 상태 즉시 전송.
+///
+/// 향후 미니 창에 새 기능을 도입할 때는 IPC 단일 채널이 아니라
+/// "DB 중심(Drift) + IPC 보조(즉시 알림)" 모델을 따른다 — 상태 이중화 금지.
 final miniWindowBridgeProvider = Provider<void>((ref) {
-  if (!Platform.isWindows) return;
+  if (!ref.watch(capabilityProvider(Capability.miniWindowIPC))) return;
 
   // ── 미니 창 → 메인 창 명령 처리 ──────────────────────
   DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {

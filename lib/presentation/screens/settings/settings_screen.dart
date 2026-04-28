@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants.dart';
+import '../../../core/platform/capability.dart';
+import '../../providers/capability_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/settings_provider.dart';
 import 'widgets/auto_timer_section.dart';
 import 'widgets/feedback_section.dart';
+import 'widgets/platform_integration_section.dart';
 import 'widgets/reset_data_card.dart';
 import 'widgets/section_title.dart';
 import 'widgets/setting_row.dart';
 import 'widgets/theme_section.dart';
-import 'widgets/windows_integration_section.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -98,6 +100,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final showFocusAutoTimer =
+        ref.watch(capabilityProvider(Capability.focusAutoTimer));
+    final showSystem = PlatformIntegrationSection.shouldRender(ref);
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Center(
@@ -114,15 +120,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const ThemeSection(),
               const SizedBox(height: 32),
 
-              const SectionTitle(title: '포커스 자동 타이머'),
-              const SizedBox(height: 12),
-              const AutoTimerSection(),
-              const SizedBox(height: 32),
+              if (showFocusAutoTimer) ...[
+                const SectionTitle(title: '포커스 자동 타이머'),
+                const SizedBox(height: 12),
+                const AutoTimerSection(),
+                const SizedBox(height: 32),
+              ],
 
-              const SectionTitle(title: '시스템'),
-              const SizedBox(height: 12),
-              const WindowsIntegrationSection(),
-              const SizedBox(height: 32),
+              if (showSystem) ...[
+                const SectionTitle(title: '시스템'),
+                const SizedBox(height: 12),
+                const PlatformIntegrationSection(),
+                const SizedBox(height: 32),
+              ],
 
               const SectionTitle(title: '과부하 감지 — 가용 시간'),
               const SizedBox(height: 12),

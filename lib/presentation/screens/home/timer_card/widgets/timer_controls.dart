@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../core/platform/capability.dart';
 import '../../../../../data/database/app_database.dart';
 import '../../../../../data/repositories/timer_repository.dart';
+import '../../../../providers/capability_provider.dart';
 import '../../../../providers/database_provider.dart';
 import '../../../../providers/timer_provider.dart';
 import '../../../../providers/window_provider.dart';
@@ -32,6 +36,9 @@ class TimerControls extends ConsumerWidget {
       );
     }
 
+    final canMini = ref.watch(capabilityProvider(Capability.miniWindowIPC));
+    final platform = ref.watch(currentPlatformProvider);
+
     return Wrap(
       alignment: WrapAlignment.center,
       children: [
@@ -54,27 +61,38 @@ class TimerControls extends ConsumerWidget {
             }
           },
         ),
-        const SizedBox(width: 12),
-        ControlBtn(
-          icon: Icons.picture_in_picture_alt_rounded,
-          label: '미니창',
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-          onTap: () async {
-            final existing = ref.read(miniWindowIdProvider);
-            if (existing != null) {
-              try {
-                await WindowController.fromWindowId(existing).show();
-              } catch (_) {
-                ref.read(miniWindowIdProvider.notifier).state = null;
+        if (canMini) ...[
+          const SizedBox(width: 12),
+          ControlBtn(
+            icon: Icons.picture_in_picture_alt_rounded,
+            label: '미니창',
+            color: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: 0.5),
+            onTap: () async {
+              final existing = ref.read(miniWindowIdProvider);
+              if (existing != null) {
+                try {
+                  await WindowController.fromWindowId(existing).show();
+                } catch (_) {
+                  ref.read(miniWindowIdProvider.notifier).state = null;
+                }
+                return;
               }
-              return;
-            }
-            final controller = await DesktopMultiWindow.createWindow('mini');
-            await controller.show();
-            ref.read(miniWindowIdProvider.notifier).state =
-                controller.windowId;
-          },
-        ),
+              // 미니 창에 platform을 args로 전달 (sub-process는 ProviderScope 미공유)
+              final args = jsonEncode({
+                'kind': 'mini',
+                'platform': platform.name,
+              });
+              final controller =
+                  await DesktopMultiWindow.createWindow(args);
+              await controller.show();
+              ref.read(miniWindowIdProvider.notifier).state =
+                  controller.windowId;
+            },
+          ),
+        ],
       ],
     );
   }

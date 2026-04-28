@@ -1,16 +1,24 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../../core/platform/capability.dart';
+import '../../../core/platform/capability_registry.dart';
+
 /// 미니 타이머 — 별도 플로팅 서브윈도우로 실행되는 화면.
 ///
 /// 타이머 상태는 메인 창에서 `desktop_multi_window` IPC 로 수신.
 /// 제어 버튼 → 메인 창으로 명령 전송 (`mini_command`).
+///
+/// [platform]은 메인 창이 [DesktopMultiWindow.createWindow] 호출 시
+/// JSON args로 전달한 값을 [PlatformId]로 복원해 주입한다 — 서브 프로세스는
+/// `ProviderScope`를 공유하지 않으므로 capability 판정에 필요하다.
 class MiniTimerScreen extends StatefulWidget {
-  const MiniTimerScreen({super.key});
+  const MiniTimerScreen({super.key, required this.platform});
+
+  final PlatformId platform;
 
   @override
   State<MiniTimerScreen> createState() => _MiniTimerScreenState();
@@ -26,7 +34,9 @@ class _MiniTimerScreenState extends State<MiniTimerScreen> {
   @override
   void initState() {
     super.initState();
-    if (Platform.isWindows) _setupIpcHandler();
+    if (supports(Capability.miniWindowIPC, widget.platform)) {
+      _setupIpcHandler();
+    }
   }
 
   void _setupIpcHandler() {

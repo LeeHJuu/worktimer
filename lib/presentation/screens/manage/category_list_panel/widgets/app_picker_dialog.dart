@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../../../../domain/services/installed_apps_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../domain/services/platform/installed_app.dart';
+import '../../../../providers/platform_integration_provider.dart';
 
-class AppPickerDialog extends StatefulWidget {
+class AppPickerDialog extends ConsumerStatefulWidget {
   const AppPickerDialog({super.key});
 
   @override
-  State<AppPickerDialog> createState() => _AppPickerDialogState();
+  ConsumerState<AppPickerDialog> createState() => _AppPickerDialogState();
 }
 
-class _AppPickerDialogState extends State<AppPickerDialog> {
+class _AppPickerDialogState extends ConsumerState<AppPickerDialog> {
   final _searchCtrl = TextEditingController();
   List<InstalledApp> _allApps = const [];
   List<InstalledApp> _filtered = const [];
@@ -30,7 +32,9 @@ class _AppPickerDialogState extends State<AppPickerDialog> {
 
   Future<void> _load() async {
     try {
-      final apps = await InstalledAppsService().fetchInstalledApps();
+      final apps = await ref
+          .read(platformIntegrationServiceProvider)
+          .fetchInstalledApps();
       if (!mounted) return;
       setState(() {
         _allApps = apps;
