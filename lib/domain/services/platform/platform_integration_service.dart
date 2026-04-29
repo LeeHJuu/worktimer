@@ -27,6 +27,10 @@ abstract class PlatformIntegrationService {
   // ── 앱 실행 ─────────────────────────────────
   Future<ShortcutLaunchResult> launchApp(String absolutePath);
 
+  /// .exe 파일에서 아이콘을 추출해 [outputPngPath]에 PNG로 저장.
+  /// 성공 시 true, 실패 시 false 반환 (예외 throw 안 함).
+  Future<bool> extractAppIcon(String exePath, String outputPngPath);
+
   // ── 설치된 앱 목록 ───────────────────────────
   Future<List<InstalledApp>> fetchInstalledApps();
 

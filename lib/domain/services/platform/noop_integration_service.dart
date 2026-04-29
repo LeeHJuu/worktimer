@@ -31,6 +31,10 @@ class NoopIntegrationService implements PlatformIntegrationService {
   Future<List<InstalledApp>> fetchInstalledApps() async => const [];
 
   @override
+  Future<bool> extractAppIcon(String exePath, String outputPngPath) async =>
+      false;
+
+  @override
   Stream<String?> get foregroundExecutable => _foregroundController.stream;
 
   @override
