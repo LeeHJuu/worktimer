@@ -1,0 +1,73 @@
+import 'package:flutter/material.dart';
+import 'package:worktimer/core/database/app_database.dart';
+import 'package:worktimer/features/manage/view/widgets/shortcut_icon.dart';
+
+class ShortcutListTile extends StatelessWidget {
+  const ShortcutListTile({
+    super.key,
+    required this.shortcut,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onLaunch,
+  });
+
+  final Shortcut shortcut;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onLaunch;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWeb = shortcut.type == 'web';
+    final colorScheme = Theme.of(context).colorScheme;
+    final onSurface = colorScheme.onSurface;
+
+    return ListTile(
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: ShortcutIconWidget(
+        shortcut: shortcut,
+        size: 16,
+        withBackground: true,
+      ),
+      title: Text(
+        shortcut.name,
+        style: TextStyle(fontSize: 13, color: onSurface),
+      ),
+      subtitle: Text(
+        shortcut.target,
+        style: TextStyle(
+            fontSize: 11, color: onSurface.withValues(alpha: 0.5)),
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: Icon(
+              isWeb
+                  ? Icons.open_in_browser_outlined
+                  : Icons.play_circle_outline,
+              size: 18,
+              color: onSurface.withValues(alpha: 0.55),
+            ),
+            tooltip: isWeb ? '브라우저 열기' : '프로그램 실행',
+            onPressed: onLaunch,
+          ),
+          IconButton(
+            icon: Icon(Icons.edit_outlined,
+                size: 18, color: onSurface.withValues(alpha: 0.55)),
+            tooltip: '편집',
+            onPressed: onEdit,
+          ),
+          IconButton(
+            icon: Icon(Icons.delete_outline,
+                size: 18, color: Colors.red.shade300),
+            tooltip: '삭제',
+            onPressed: onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}
