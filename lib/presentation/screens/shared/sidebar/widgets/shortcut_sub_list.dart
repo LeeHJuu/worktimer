@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../data/database/app_database.dart';
 import '../../../../providers/timer_provider.dart';
+import '../../../../widgets/shortcut_icon_widget.dart';
 
 class ShortcutSubList extends ConsumerWidget {
   const ShortcutSubList({
@@ -30,7 +31,6 @@ class ShortcutSubList extends ConsumerWidget {
           endIndent: 10,
         ),
         ...shortcuts.map((s) {
-          final isWeb = s.type == 'web';
           return MouseRegion(
             cursor: SystemMouseCursors.click,
             child: InkWell(
@@ -53,13 +53,7 @@ class ShortcutSubList extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(14, 6, 12, 6),
                 child: Row(
                   children: [
-                    Icon(
-                      isWeb
-                          ? Icons.language_outlined
-                          : Icons.apps_outlined,
-                      size: 13,
-                      color: colorScheme.onSurface.withValues(alpha: 0.4),
-                    ),
+                    ShortcutIconWidget(shortcut: s, size: 13),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

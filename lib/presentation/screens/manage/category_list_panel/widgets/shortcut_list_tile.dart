@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../../data/database/app_database.dart';
+import '../../../../widgets/shortcut_icon_widget.dart';
 
 class ShortcutListTile extends StatelessWidget {
   const ShortcutListTile({
@@ -24,19 +25,10 @@ class ShortcutListTile extends StatelessWidget {
     return ListTile(
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: (isWeb ? Colors.blue : Colors.orange)
-              .withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Icon(
-          isWeb ? Icons.language_outlined : Icons.apps_outlined,
-          size: 16,
-          color: isWeb ? Colors.blue : Colors.orange,
-        ),
+      leading: ShortcutIconWidget(
+        shortcut: shortcut,
+        size: 16,
+        withBackground: true,
       ),
       title: Text(
         shortcut.name,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/database/app_database.dart';
 import '../../providers/category_provider.dart';
+import '../../providers/icon_provider.dart';
 import '../../providers/shortcut_provider.dart';
 import '../../providers/timer_provider.dart';
 
@@ -63,9 +64,18 @@ class ManageController {
       await repo.insert(companion.copyWith(sortOrder: Value(nextOrder)));
     } else {
       await repo.update(companion);
+      // 캐시된 아이콘 무효화 → 다음 렌더 시 재추출
+      final id = companion.id.value!;
+      final exePath = companion.target.value;
+      await _ref.read(iconServiceProvider).invalidate(id);
+      if (exePath != null) {
+        _ref.invalidate(appIconPathProvider((id: id, exePath: exePath)));
+      }
     }
   }
 
-  Future<void> deleteShortcut(int id) =>
-      _ref.read(shortcutRepositoryProvider).delete(id);
+  Future<void> deleteShortcut(int id) async {
+    await _ref.read(iconServiceProvider).invalidate(id);
+    await _ref.read(shortcutRepositoryProvider).delete(id);
+  }
 }

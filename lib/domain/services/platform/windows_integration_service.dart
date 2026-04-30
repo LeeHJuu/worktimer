@@ -133,6 +133,27 @@ class WindowsIntegrationService implements PlatformIntegrationService {
     }
   }
 
+  // ── 앱 아이콘 추출 ───────────────────────────
+
+  @override
+  Future<bool> extractAppIcon(String exePath, String outputPngPath) async {
+    if (!File(exePath).existsSync()) return false;
+    final safeExe = exePath.replaceAll("'", "''");
+    final safeOut = outputPngPath.replaceAll("'", "''");
+    final script = '''
+Add-Type -AssemblyName System.Drawing;
+\$icon = [System.Drawing.Icon]::ExtractAssociatedIcon('$safeExe');
+\$bmp = \$icon.ToBitmap();
+\$bmp.Save('$safeOut', [System.Drawing.Imaging.ImageFormat]::Png);
+\$bmp.Dispose(); \$icon.Dispose()
+''';
+    final result = await Process.run(
+      'powershell',
+      ['-NoProfile', '-NonInteractive', '-Command', script],
+    );
+    return result.exitCode == 0 && File(outputPngPath).existsSync();
+  }
+
   // ── 설치된 앱 목록 ───────────────────────────
 
   static const _installedAppsScript = r'''
