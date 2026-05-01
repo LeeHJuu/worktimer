@@ -23,7 +23,15 @@
       "Bash(sed -i \"s|import '../../../providers/|import '../../../../providers/|g\" timer_controls.dart)",
       "Bash(sed -i \"s|import '../../../../|import '../../../|g\" overload_banner.dart)",
       "Bash(sed -i \"s|import '../../../providers/|import '../../providers/|g\" overload_banner.dart)",
-      "Bash(dart analyze *)"
+      "Bash(dart analyze *)",
+      "Read(//Users/leehyunju/fvm/default/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/leehyunju/**)",
+      "Bash(/Users/leehyunju/Desktop/dev/flutter/bin/flutter --version)",
+      "Bash(/Users/leehyunju/Desktop/dev/flutter/bin/flutter pub *)",
+      "Bash(/Users/leehyunju/Desktop/dev/flutter/bin/flutter build *)",
+      "Bash(/Users/leehyunju/Desktop/dev/flutter/bin/flutter analyze *)",
+      "Bash(~/.fvm/default/bin/flutter analyze *)"
     ]
   }
 }

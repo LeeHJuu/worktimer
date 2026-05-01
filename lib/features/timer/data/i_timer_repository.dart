@@ -38,4 +38,7 @@ abstract class ITimerRepository {
 
   /// 모든 세션 데이터 삭제
   Future<void> deleteAllSessions();
+
+  /// 특정 주의 집중 세션 스트림 (weekStart: 해당 주 월요일 00:00:00)
+  Stream<List<TimerSession>> watchWeekSessions(DateTime weekStart);
 }

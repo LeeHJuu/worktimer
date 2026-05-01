@@ -28,7 +28,6 @@ class _ShortcutDialogState extends ConsumerState<ShortcutDialog> {
   final _nameCtrl = TextEditingController();
   final _targetCtrl = TextEditingController();
   String _type = 'web';
-  bool _autoStart = true;
   bool _saving = false;
   bool _isNormalizingText = false;
 
@@ -39,7 +38,6 @@ class _ShortcutDialogState extends ConsumerState<ShortcutDialog> {
       _nameCtrl.text = widget.existing!.name;
       _targetCtrl.text = widget.existing!.target;
       _type = _normalizeType(widget.existing!.type);
-      _autoStart = widget.existing!.autoStart;
     }
     _targetCtrl.addListener(_onTargetChanged);
   }
@@ -173,35 +171,6 @@ class _ShortcutDialogState extends ConsumerState<ShortcutDialog> {
                     : 'C:\\Program Files\\app.exe',
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '포커스 시 자동 시작',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-                Switch(
-                  value: _autoStart,
-                  onChanged: (v) => setState(() => _autoStart = v),
-                ),
-              ],
-            ),
-            Text(
-              '이 앱/브라우저에 포커스가 가면 자동으로 타이머를 시작합니다.',
-              style: TextStyle(
-                fontSize: 11,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.55),
-              ),
-            ),
           ],
         ),
       ),
@@ -233,7 +202,7 @@ class _ShortcutDialogState extends ConsumerState<ShortcutDialog> {
             target: Value(target),
             type: Value(_type),
             sortOrder: Value(widget.existing!.sortOrder),
-            autoStart: Value(_autoStart),
+            autoStart: const Value(true),
           )
         : ShortcutsCompanion.insert(
             categoryId: widget.categoryId,
@@ -241,7 +210,7 @@ class _ShortcutDialogState extends ConsumerState<ShortcutDialog> {
             target: target,
             type: _type,
             sortOrder: 0,
-            autoStart: Value(_autoStart),
+            autoStart: const Value(true),
           );
 
     await widget.onSave(companion);

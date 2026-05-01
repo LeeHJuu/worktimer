@@ -104,6 +104,19 @@ class TimerRepository implements ITimerRepository {
     await _db.delete(_db.timerSessions).go();
   }
 
+  @override
+  Stream<List<TimerSession>> watchWeekSessions(DateTime weekStart) {
+    final start = weekStart.millisecondsSinceEpoch ~/ 1000;
+    final end = start + 7 * 86400;
+    return (_db.select(_db.timerSessions)
+          ..where((t) =>
+              t.startedAt.isBiggerOrEqualValue(start) &
+              t.startedAt.isSmallerThanValue(end) &
+              t.isFocus.equals(true))
+          ..orderBy([(t) => OrderingTerm.asc(t.startedAt)]))
+        .watch();
+  }
+
   /// 오늘 00:00:00 Unix timestamp
   int _todayStartUnix() {
     final now = DateTime.now();

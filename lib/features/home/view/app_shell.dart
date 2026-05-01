@@ -26,19 +26,15 @@ class _AppShellState extends ConsumerState<AppShell> {
     return Scaffold(
       body: Row(
         children: [
-          // 사이드바
           Sidebar(
             selectedIndex: _selectedIndex,
-            onTabSelected: (index) =>
-                setState(() => _selectedIndex = index),
+            onTabSelected: (index) => setState(() => _selectedIndex = index),
           ),
-          // 구분선
           VerticalDivider(
             width: 1,
             thickness: 1,
             color: colorScheme.outline.withValues(alpha: 0.2),
           ),
-          // 콘텐츠 영역 (전환 애니메이션)
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),

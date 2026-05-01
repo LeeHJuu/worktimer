@@ -8,6 +8,7 @@ import 'package:worktimer/core/database/tables/shortcuts_table.dart';
 import 'package:worktimer/core/database/tables/timer_sessions_table.dart';
 import 'package:worktimer/core/database/tables/condition_logs_table.dart';
 import 'package:worktimer/core/database/tables/settings_table.dart';
+import 'package:worktimer/core/database/tables/todos_table.dart';
 
 part 'app_database.g.dart';
 
@@ -18,6 +19,7 @@ part 'app_database.g.dart';
     TimerSessions,
     ConditionLogs,
     Settings,
+    Todos,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -27,7 +29,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -52,6 +54,9 @@ class AppDatabase extends _$AppDatabase {
             await m.database.customStatement(
               "UPDATE shortcuts SET type = 'app' WHERE type = 'exe'",
             );
+          }
+          if (from < 6) {
+            await m.createTable(todos);
           }
         },
       );

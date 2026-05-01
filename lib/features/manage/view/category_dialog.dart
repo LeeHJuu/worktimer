@@ -23,8 +23,6 @@ class _CategoryDialogState extends State<CategoryDialog> {
   DateTime? _goalDeadline;
   bool _goalIsActive = false;
 
-  bool _autoTimerOn = false;
-
   static const _colorOptions = [
     Color(0xFF6C63FF),
     Color(0xFFFF6584),
@@ -48,7 +46,6 @@ class _CategoryDialogState extends State<CategoryDialog> {
       _goalTitleCtrl.text = cat.goalTitle ?? '';
       _goalHoursCtrl.text = cat.goalTargetHours?.toString() ?? '';
       _goalIsActive = cat.goalIsActive;
-      _autoTimerOn = cat.autoTimerOn;
       if (cat.goalDeadline != null) {
         _goalDeadline =
             DateTime.fromMillisecondsSinceEpoch(cat.goalDeadline! * 1000);
@@ -136,24 +133,6 @@ class _CategoryDialogState extends State<CategoryDialog> {
                 const SizedBox(height: 20),
                 const Divider(),
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '자동 타이머 허용',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    Switch(
-                      value: _autoTimerOn,
-                      onChanged: (v) => setState(() => _autoTimerOn = v),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -279,7 +258,7 @@ class _CategoryDialogState extends State<CategoryDialog> {
             goalTargetHours: Value(goalTargetHours),
             goalDeadline: Value(goalDeadlineTs),
             goalIsActive: Value(_goalIsActive),
-            autoTimerOn: Value(_autoTimerOn),
+            autoTimerOn: const Value(true),
           )
         : CategoriesCompanion.insert(
             name: name,
@@ -290,7 +269,7 @@ class _CategoryDialogState extends State<CategoryDialog> {
             goalTargetHours: Value(goalTargetHours),
             goalDeadline: Value(goalDeadlineTs),
             goalIsActive: Value(_goalIsActive),
-            autoTimerOn: Value(_autoTimerOn),
+            autoTimerOn: const Value(true),
           );
 
     await widget.onSave(companion);

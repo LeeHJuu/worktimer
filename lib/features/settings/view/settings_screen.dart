@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:worktimer/core/constants.dart';
-import 'package:worktimer/core/platform/capability.dart';
-import 'package:worktimer/core/platform/capability_provider.dart';
 import 'package:worktimer/core/database/database_provider.dart';
 import 'package:worktimer/features/settings/data/settings_provider.dart';
-import 'package:worktimer/features/settings/view/widgets/auto_timer_section.dart';
 import 'package:worktimer/features/settings/view/widgets/feedback_section.dart';
 import 'package:worktimer/features/settings/view/widgets/platform_integration_section.dart';
 import 'package:worktimer/features/settings/view/widgets/reset_data_card.dart';
@@ -100,8 +97,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final showFocusAutoTimer =
-        ref.watch(capabilityProvider(Capability.focusAutoTimer));
     final showSystem = PlatformIntegrationSection.shouldRender(ref);
 
     return Padding(
@@ -119,13 +114,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 12),
               const ThemeSection(),
               const SizedBox(height: 32),
-
-              if (showFocusAutoTimer) ...[
-                const SectionTitle(title: '포커스 자동 타이머'),
-                const SizedBox(height: 12),
-                const AutoTimerSection(),
-                const SizedBox(height: 32),
-              ],
 
               if (showSystem) ...[
                 const SectionTitle(title: '시스템'),
