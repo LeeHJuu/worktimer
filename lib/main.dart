@@ -5,16 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
-import 'core/platform/capability.dart' show PlatformId;
-import 'core/platform/capability_registry.dart';
-import 'core/theme.dart';
-import 'domain/services/timer_service.dart';
-import 'presentation/providers/auto_timer_provider.dart';
-import 'presentation/providers/database_provider.dart';
-import 'presentation/providers/theme_provider.dart';
-import 'presentation/providers/window_provider.dart';
-import 'presentation/screens/mini_timer/mini_timer_screen.dart';
-import 'presentation/screens/shared/app_shell.dart';
+import 'package:worktimer/core/platform/capability.dart' show PlatformId;
+import 'package:worktimer/core/platform/capability_registry.dart';
+import 'package:worktimer/core/theme.dart';
+import 'package:worktimer/features/timer/data/timer_service.dart';
+import 'package:worktimer/features/timer/data/auto_timer_provider.dart';
+import 'package:worktimer/core/database/database_provider.dart';
+import 'package:worktimer/features/settings/data/theme_provider.dart';
+import 'package:worktimer/features/mini_timer/data/mini_window_provider.dart';
+import 'package:worktimer/features/mini_timer/view/mini_timer_screen.dart';
+import 'package:worktimer/features/home/view/app_shell.dart';
 
 const _kDefaultWindowSize = Size(1280, 720);
 

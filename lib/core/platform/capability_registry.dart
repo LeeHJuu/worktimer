@@ -1,6 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'capability.dart';
+import 'package:worktimer/core/platform/capability.dart';
 
 /// 각 [Capability]가 지원되는 [PlatformId] 셋.
 ///
