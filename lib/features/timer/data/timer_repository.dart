@@ -117,6 +117,20 @@ class TimerRepository implements ITimerRepository {
         .watch();
   }
 
+  @override
+  Stream<List<TimerSession>> watchDaySessions(DateTime date) {
+    final dayStart =
+        DateTime(date.year, date.month, date.day).millisecondsSinceEpoch ~/
+            1000;
+    return (_db.select(_db.timerSessions)
+          ..where((t) =>
+              t.startedAt.isBiggerOrEqualValue(dayStart) &
+              t.startedAt.isSmallerThanValue(dayStart + 86400) &
+              t.isFocus.equals(true))
+          ..orderBy([(t) => OrderingTerm.asc(t.startedAt)]))
+        .watch();
+  }
+
   /// 오늘 00:00:00 Unix timestamp
   int _todayStartUnix() {
     final now = DateTime.now();

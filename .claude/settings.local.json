@@ -31,7 +31,9 @@
       "Bash(/Users/leehyunju/Desktop/dev/flutter/bin/flutter pub *)",
       "Bash(/Users/leehyunju/Desktop/dev/flutter/bin/flutter build *)",
       "Bash(/Users/leehyunju/Desktop/dev/flutter/bin/flutter analyze *)",
-      "Bash(~/.fvm/default/bin/flutter analyze *)"
+      "Bash(~/.fvm/default/bin/flutter analyze *)",
+      "Bash(/Users/leehyunju/fvm/versions/stable/bin/flutter analyze *)",
+      "Bash(command -v fvm)"
     ]
   }
 }

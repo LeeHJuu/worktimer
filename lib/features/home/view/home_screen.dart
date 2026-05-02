@@ -18,11 +18,36 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isWeekly = false;
+  late DateTime _selectedDay = _todayDate();
+  late DateTime _selectedWeekStart = _thisWeekStart();
 
-  DateTime get _weekStart {
-    final now = DateTime.now();
-    final monday = now.subtract(Duration(days: now.weekday - 1));
+  static DateTime _todayDate() {
+    final n = DateTime.now();
+    return DateTime(n.year, n.month, n.day);
+  }
+
+  static DateTime _thisWeekStart() {
+    final n = DateTime.now();
+    final monday = n.subtract(Duration(days: n.weekday - 1));
     return DateTime(monday.year, monday.month, monday.day);
+  }
+
+  bool get _canGoForwardDay => _selectedDay.isBefore(_todayDate());
+  bool get _canGoForwardWeek => _selectedWeekStart.isBefore(_thisWeekStart());
+
+  void _prevDay() =>
+      setState(() => _selectedDay = _selectedDay.subtract(const Duration(days: 1)));
+  void _nextDay() {
+    if (!_canGoForwardDay) return;
+    setState(() => _selectedDay = _selectedDay.add(const Duration(days: 1)));
+  }
+
+  void _prevWeek() => setState(
+      () => _selectedWeekStart = _selectedWeekStart.subtract(const Duration(days: 7)));
+  void _nextWeek() {
+    if (!_canGoForwardWeek) return;
+    setState(
+        () => _selectedWeekStart = _selectedWeekStart.add(const Duration(days: 7)));
   }
 
   @override
@@ -33,13 +58,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return isMobile
             ? _MobileLayout(
                 isWeekly: _isWeekly,
-                weekStart: _weekStart,
+                selectedDay: _selectedDay,
+                selectedWeekStart: _selectedWeekStart,
+                canGoForwardDay: _canGoForwardDay,
+                canGoForwardWeek: _canGoForwardWeek,
                 onToggle: (v) => setState(() => _isWeekly = v),
+                onPrevDay: _prevDay,
+                onNextDay: _nextDay,
+                onPrevWeek: _prevWeek,
+                onNextWeek: _nextWeek,
               )
             : _DesktopLayout(
                 isWeekly: _isWeekly,
-                weekStart: _weekStart,
+                selectedDay: _selectedDay,
+                selectedWeekStart: _selectedWeekStart,
+                canGoForwardDay: _canGoForwardDay,
+                canGoForwardWeek: _canGoForwardWeek,
                 onToggle: (v) => setState(() => _isWeekly = v),
+                onPrevDay: _prevDay,
+                onNextDay: _nextDay,
+                onPrevWeek: _prevWeek,
+                onNextWeek: _nextWeek,
               );
       },
     );
@@ -51,18 +90,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 class _DesktopLayout extends ConsumerWidget {
   const _DesktopLayout({
     required this.isWeekly,
-    required this.weekStart,
+    required this.selectedDay,
+    required this.selectedWeekStart,
+    required this.canGoForwardDay,
+    required this.canGoForwardWeek,
     required this.onToggle,
+    required this.onPrevDay,
+    required this.onNextDay,
+    required this.onPrevWeek,
+    required this.onNextWeek,
   });
 
   final bool isWeekly;
-  final DateTime weekStart;
+  final DateTime selectedDay;
+  final DateTime selectedWeekStart;
+  final bool canGoForwardDay;
+  final bool canGoForwardWeek;
   final ValueChanged<bool> onToggle;
+  final VoidCallback onPrevDay;
+  final VoidCallback onNextDay;
+  final VoidCallback onPrevWeek;
+  final VoidCallback onNextWeek;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final now = DateTime.now();
 
     return Column(
       children: [
@@ -70,8 +122,11 @@ class _DesktopLayout extends ConsumerWidget {
         _HomeHeader(
           isWeekly: isWeekly,
           onToggle: onToggle,
-          weekStart: weekStart,
-          now: now,
+          selectedDay: selectedDay,
+          selectedWeekStart: selectedWeekStart,
+          canGoForward: isWeekly ? canGoForwardWeek : canGoForwardDay,
+          onPrev: isWeekly ? onPrevWeek : onPrevDay,
+          onNext: isWeekly ? onNextWeek : onNextDay,
         ),
         Divider(height: 1, color: colorScheme.outline.withValues(alpha: 0.12)),
 
@@ -87,8 +142,8 @@ class _DesktopLayout extends ConsumerWidget {
                   flex: 16,
                   child: _PanelCard(
                     child: isWeekly
-                        ? WeeklyTimelinePanel(weekStart: weekStart)
-                        : const DailyTimelinePanel(),
+                        ? WeeklyTimelinePanel(weekStart: selectedWeekStart)
+                        : DailyTimelinePanel(date: selectedDay),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -113,18 +168,31 @@ class _DesktopLayout extends ConsumerWidget {
 class _MobileLayout extends ConsumerWidget {
   const _MobileLayout({
     required this.isWeekly,
-    required this.weekStart,
+    required this.selectedDay,
+    required this.selectedWeekStart,
+    required this.canGoForwardDay,
+    required this.canGoForwardWeek,
     required this.onToggle,
+    required this.onPrevDay,
+    required this.onNextDay,
+    required this.onPrevWeek,
+    required this.onNextWeek,
   });
 
   final bool isWeekly;
-  final DateTime weekStart;
+  final DateTime selectedDay;
+  final DateTime selectedWeekStart;
+  final bool canGoForwardDay;
+  final bool canGoForwardWeek;
   final ValueChanged<bool> onToggle;
+  final VoidCallback onPrevDay;
+  final VoidCallback onNextDay;
+  final VoidCallback onPrevWeek;
+  final VoidCallback onNextWeek;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final timerState = ref.watch(timerServiceProvider);
-    final now = DateTime.now();
 
     return Scaffold(
       body: CustomScrollView(
@@ -134,8 +202,11 @@ class _MobileLayout extends ConsumerWidget {
             child: _HomeHeader(
               isWeekly: isWeekly,
               onToggle: onToggle,
-              weekStart: weekStart,
-              now: now,
+              selectedDay: selectedDay,
+              selectedWeekStart: selectedWeekStart,
+              canGoForward: isWeekly ? canGoForwardWeek : canGoForwardDay,
+              onPrev: isWeekly ? onPrevWeek : onPrevDay,
+              onNext: isWeekly ? onNextWeek : onNextDay,
             ),
           ),
           // 진행 중 세션 카드 (모바일 상단 고정)
@@ -157,8 +228,8 @@ class _MobileLayout extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _PanelCard(
                 child: isWeekly
-                    ? WeeklyTimelinePanel(weekStart: weekStart)
-                    : const DailyTimelinePanel(),
+                    ? WeeklyTimelinePanel(weekStart: selectedWeekStart)
+                    : DailyTimelinePanel(date: selectedDay),
               ),
             ),
           ),
@@ -347,26 +418,50 @@ class _HomeHeader extends StatelessWidget {
   const _HomeHeader({
     required this.isWeekly,
     required this.onToggle,
-    required this.weekStart,
-    required this.now,
+    required this.selectedDay,
+    required this.selectedWeekStart,
+    required this.canGoForward,
+    required this.onPrev,
+    required this.onNext,
   });
 
   final bool isWeekly;
   final ValueChanged<bool> onToggle;
-  final DateTime weekStart;
-  final DateTime now;
+  final DateTime selectedDay;
+  final DateTime selectedWeekStart;
+  final bool canGoForward;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-    final dayLabel = weekdays[now.weekday - 1];
-    final weekEnd = weekStart.add(const Duration(days: 6));
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final thisWeekStart = () {
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      return DateTime(monday.year, monday.month, monday.day);
+    }();
 
-    final title = isWeekly ? '이번 주 흐름' : '오늘의 흐름';
-    final subtitle = isWeekly
-        ? '${weekStart.month}/${weekStart.day} — ${weekEnd.month}/${weekEnd.day}'
-        : '${now.month}월 ${now.day}일 $dayLabel요일';
+    final weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+    final weekEnd = selectedWeekStart.add(const Duration(days: 6));
+
+    final isCurrentDay = selectedDay == today;
+    final isCurrentWeek = selectedWeekStart == thisWeekStart;
+
+    final String title;
+    final String subtitle;
+    if (isWeekly) {
+      title = isCurrentWeek
+          ? '이번 주 흐름'
+          : '${selectedWeekStart.month}/${selectedWeekStart.day} 주';
+      subtitle =
+          '${selectedWeekStart.month}/${selectedWeekStart.day} — ${weekEnd.month}/${weekEnd.day}';
+    } else {
+      final dayLabel = weekdays[selectedDay.weekday - 1];
+      title = isCurrentDay ? '오늘의 흐름' : '${selectedDay.month}월 ${selectedDay.day}일';
+      subtitle = '${selectedDay.month}월 ${selectedDay.day}일 $dayLabel요일';
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
@@ -382,13 +477,61 @@ class _HomeHeader extends StatelessWidget {
               Text(subtitle,
                   style: TextStyle(
                       fontSize: 12,
-                      color:
-                          colorScheme.onSurface.withValues(alpha: 0.45))),
+                      color: colorScheme.onSurface.withValues(alpha: 0.45))),
             ],
           ),
           const Spacer(),
+          _NavArrowBtn(
+            icon: Icons.chevron_left_rounded,
+            onTap: onPrev,
+            enabled: true,
+          ),
+          const SizedBox(width: 2),
+          _NavArrowBtn(
+            icon: Icons.chevron_right_rounded,
+            onTap: canGoForward ? onNext : null,
+            enabled: canGoForward,
+          ),
+          const SizedBox(width: 8),
           _SegmentToggle(isWeekly: isWeekly, onToggle: onToggle),
         ],
+      ),
+    );
+  }
+}
+
+class _NavArrowBtn extends StatelessWidget {
+  const _NavArrowBtn({
+    required this.icon,
+    required this.onTap,
+    required this.enabled,
+  });
+
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+              color: colorScheme.outline.withValues(alpha: 0.15)),
+        ),
+        child: Icon(
+          icon,
+          size: 16,
+          color: enabled
+              ? colorScheme.onSurface.withValues(alpha: 0.7)
+              : colorScheme.onSurface.withValues(alpha: 0.2),
+        ),
       ),
     );
   }

@@ -41,4 +41,7 @@ abstract class ITimerRepository {
 
   /// 특정 주의 집중 세션 스트림 (weekStart: 해당 주 월요일 00:00:00)
   Stream<List<TimerSession>> watchWeekSessions(DateTime weekStart);
+
+  /// 특정 날짜의 집중 세션 스트림 (date: 해당 날짜, 시분초 무관)
+  Stream<List<TimerSession>> watchDaySessions(DateTime date);
 }

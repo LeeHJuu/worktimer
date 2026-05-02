@@ -90,36 +90,75 @@ class ThemeSection extends ConsumerWidget {
     void Function(String hex) onApply,
   ) async {
     Color picked = initial;
+    final hexController = TextEditingController(text: _colorToHex(initial));
 
     await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('색상 선택'),
-        content: SingleChildScrollView(
-          child: ColorPicker(
-            pickerColor: picked,
-            onColorChanged: (c) => picked = c,
-            enableAlpha: false,
-            pickerAreaHeightPercent: 0.7,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('색상 선택'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ColorPicker(
+                  pickerColor: picked,
+                  onColorChanged: (c) {
+                    setState(() {
+                      picked = c;
+                      hexController.text = _colorToHex(c);
+                    });
+                  },
+                  enableAlpha: false,
+                  pickerAreaHeightPercent: 0.7,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: hexController,
+                  decoration: const InputDecoration(
+                    labelText: '헥스 코드',
+                    hintText: '#FFFFFF',
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  style: const TextStyle(fontFamily: 'monospace'),
+                  onChanged: (value) {
+                    final match = RegExp(r'^#?([0-9A-Fa-f]{6})$')
+                        .firstMatch(value.trim());
+                    if (match != null) {
+                      setState(() {
+                        picked = Color(
+                          int.parse('FF${match.group(1)!}', radix: 16),
+                        );
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('취소'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                onApply(_colorToHex(picked));
+              },
+              child: const Text('적용'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              final argb = picked.toARGB32();
-              final hex =
-                  '#${(argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
-              onApply(hex);
-            },
-            child: const Text('적용'),
-          ),
-        ],
       ),
     );
+    hexController.dispose();
+  }
+
+  String _colorToHex(Color color) {
+    final argb = color.toARGB32();
+    return '#${(argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
   }
 }

@@ -15,12 +15,22 @@ const _kHourPx = 24.0;
 const _kTimelineHeight = 18 * _kHourPx; // 06:00~24:00 = 432px
 
 class DailyTimelinePanel extends ConsumerWidget {
-  const DailyTimelinePanel({super.key});
+  const DailyTimelinePanel({super.key, this.date});
+
+  final DateTime? date;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessionsAsync = ref.watch(_todaySessionsStreamProvider);
-    final timerState = ref.watch(timerServiceProvider);
+    final now = DateTime.now();
+    final effectiveDate = date != null
+        ? DateTime(date!.year, date!.month, date!.day)
+        : DateTime(now.year, now.month, now.day);
+    final isToday = effectiveDate.year == now.year &&
+        effectiveDate.month == now.month &&
+        effectiveDate.day == now.day;
+
+    final sessionsAsync = ref.watch(_daySessionsStreamProvider(effectiveDate));
+    final timerState = isToday ? ref.watch(timerServiceProvider) : null;
     final categoriesAsync = ref.watch(visibleCategoriesProvider);
 
     return sessionsAsync.when(
@@ -31,6 +41,7 @@ class DailyTimelinePanel extends ConsumerWidget {
             sessions: sessions,
             catMap: catMap,
             timerState: timerState,
+            isToday: isToday,
           );
         },
         loading: () => const _LoadingBox(),
@@ -42,9 +53,10 @@ class DailyTimelinePanel extends ConsumerWidget {
   }
 }
 
-final _todaySessionsStreamProvider = StreamProvider<List<TimerSession>>((ref) {
-  return ref.watch(timerRepositoryProvider).watchTodaySessions();
-});
+final _daySessionsStreamProvider =
+    StreamProvider.autoDispose.family<List<TimerSession>, DateTime>(
+  (ref, date) => ref.watch(timerRepositoryProvider).watchDaySessions(date),
+);
 
 // ── 일간 타임라인 ─────────────────────────────────────────────
 
@@ -53,11 +65,13 @@ class _DailyTimeline extends StatelessWidget {
     required this.sessions,
     required this.catMap,
     required this.timerState,
+    required this.isToday,
   });
 
   final List<TimerSession> sessions;
   final Map<int, Category> catMap;
-  final TimerState timerState;
+  final TimerState? timerState;
+  final bool isToday;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +117,8 @@ class _DailyTimeline extends StatelessWidget {
 
             // 진행 중 세션 현재 너비 계산
             TimerSession? activeSession;
-            if (timerState.isRunning || timerState.isPaused) {
+            if (timerState != null &&
+                (timerState!.isRunning || timerState!.isPaused)) {
               activeSession = sessions.where((s) => s.endedAt == null).firstOrNull;
             }
 
@@ -126,14 +141,14 @@ class _DailyTimeline extends StatelessWidget {
                       (s) => _buildBlock(s, trackWidth, catMap, context),
                     ),
                 // 진행 중 세션 블록
-                if (activeSession != null)
+                if (activeSession != null && timerState != null)
                   _buildLiveBlock(
-                      activeSession, timerState, trackWidth, catMap, context),
-                // Now 마커
-                if (nowMin > _kStartMin && nowMin < _kEndMin)
+                      activeSession, timerState!, trackWidth, catMap, context),
+                // Now 마커 (오늘만)
+                if (isToday && nowMin > _kStartMin && nowMin < _kEndMin)
                   _NowMarker(left: nowPct * trackWidth, now: now),
                 // Gap 마커들
-                ..._buildGapMarkers(sessions, trackWidth, timerState, catMap, context),
+                ..._buildGapMarkers(sessions, trackWidth, catMap, context),
               ],
             );
           }),
@@ -249,7 +264,7 @@ class _DailyTimeline extends StatelessWidget {
   }
 
   List<Widget> _buildGapMarkers(List<TimerSession> sessions, double trackWidth,
-      TimerState timerState, Map<int, Category> catMap, BuildContext context) {
+      Map<int, Category> catMap, BuildContext context) {
     if (sessions.length < 2) return [];
     final sorted = [...sessions]
       ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
