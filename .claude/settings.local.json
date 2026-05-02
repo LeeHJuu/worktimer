@@ -33,7 +33,10 @@
       "Bash(/Users/leehyunju/Desktop/dev/flutter/bin/flutter analyze *)",
       "Bash(~/.fvm/default/bin/flutter analyze *)",
       "Bash(/Users/leehyunju/fvm/versions/stable/bin/flutter analyze *)",
-      "Bash(command -v fvm)"
+      "Bash(command -v fvm)",
+      "Bash(mdfind -name \"flutter\")",
+      "Bash(export PATH=\"/Users/leehyunju/Desktop/dev/flutter/bin:$PATH\")",
+      "Bash(flutter build *)"
     ]
   }
 }

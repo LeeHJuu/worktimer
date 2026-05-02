@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:worktimer/core/database/app_database.dart';
+import 'package:worktimer/core/logging/app_logger.dart';
 
 class TodoRepository {
   TodoRepository(this._db);
@@ -20,17 +21,20 @@ class TodoRepository {
     required String title,
     int? categoryId,
     int? estimatedMinutes,
-  }) {
+  }) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    return _db.into(_db.todos).insert(TodosCompanion.insert(
+    final id = await _db.into(_db.todos).insert(TodosCompanion.insert(
           title: title,
           categoryId: Value(categoryId),
           estimatedMinutes: Value(estimatedMinutes),
           createdAt: now,
         ));
+    AppLog.d('todo insert id=$id categoryId=$categoryId');
+    return id;
   }
 
   Future<void> complete(int id) async {
+    AppLog.d('todo complete id=$id');
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     await (_db.update(_db.todos)..where((t) => t.id.equals(id))).write(
       TodosCompanion(

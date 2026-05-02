@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'package:worktimer/core/logging/app_logger.dart';
 import 'package:worktimer/core/platform/platform_integration_service.dart';
 
 class IconService {
@@ -15,7 +16,14 @@ class IconService {
   Future<Directory> _cacheDir() async {
     final base = await getApplicationSupportDirectory();
     final dir = Directory(p.join(base.path, _iconDirName));
-    if (!dir.existsSync()) await dir.create(recursive: true);
+    if (!dir.existsSync()) {
+      try {
+        await dir.create(recursive: true);
+      } catch (e, st) {
+        AppLog.e('icon cacheDir create failed: ${dir.path}', e, st);
+        rethrow;
+      }
+    }
     return dir;
   }
 
@@ -33,9 +41,15 @@ class IconService {
     final pngPath = p.join(dir.path, '$shortcutId.png');
 
     if (File(pngPath).existsSync()) return pngPath;
-    if (!File(exePath).existsSync()) return null;
+    if (!File(exePath).existsSync()) {
+      AppLog.w('resolveAppIcon: exe not found id=$shortcutId path=$exePath');
+      return null;
+    }
 
     final ok = await _platform.extractAppIcon(exePath, pngPath);
+    if (!ok) {
+      AppLog.w('resolveAppIcon: extract failed id=$shortcutId exe=$exePath');
+    }
     return ok ? pngPath : null;
   }
 

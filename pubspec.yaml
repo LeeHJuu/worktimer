@@ -49,6 +49,8 @@ dependencies:
   win32: ^5.5.0
   ffi: ^2.1.0
   desktop_multi_window: ^0.2.1
+  logger: ^2.5.0
+  share_plus: ^10.1.4
 
 dev_dependencies:
   flutter_test:

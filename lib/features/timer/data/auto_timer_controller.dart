@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:worktimer/core/database/app_database.dart';
+import 'package:worktimer/core/logging/app_logger.dart';
 import 'package:worktimer/features/timer/data/timer_provider.dart';
 import 'package:worktimer/core/platform/platform_integration_service.dart';
 import 'package:worktimer/features/timer/data/timer_service.dart';
@@ -44,19 +45,28 @@ class AutoTimerController {
 
   void enable() {
     if (_enabled) return;
-    if (!canFocusAutoTimer) return;
+    if (!canFocusAutoTimer) {
+      AppLog.i('AutoTimer: enable skipped (platform unsupported)');
+      return;
+    }
     _enabled = true;
+    AppLog.i('AutoTimer: enabled');
 
     _scSub = shortcutsStream.listen((scs) {
       _shortcuts = scs;
     });
 
-    integration.startForegroundWatch();
+    try {
+      integration.startForegroundWatch();
+    } catch (e, st) {
+      AppLog.e('AutoTimer: startForegroundWatch failed', e, st);
+    }
     _focusSub = integration.foregroundExecutable.listen(_onFocusChanged);
   }
 
   void disable() {
     if (!_enabled) return;
+    AppLog.i('AutoTimer: disabled');
     _enabled = false;
     integration.stopForegroundWatch();
     _focusSub?.cancel();
@@ -99,11 +109,16 @@ class AutoTimerController {
     if (state.isIdle) return;
 
     if (matched == null) {
-      if (state.isRunning) _timer.pause();
+      if (state.isRunning) {
+        AppLog.d('AutoTimer: no match -> pause (active=${state.activeCategoryId})');
+        _timer.pause();
+      }
       return;
     }
 
-    // matched는 항상 activeCategoryId 소속 — 일시정지 상태면 resume
-    if (state.isPaused) _timer.start(matched.categoryId);
+    if (state.isPaused) {
+      AppLog.d('AutoTimer: match -> resume (cat=${matched.categoryId})');
+      _timer.start(matched.categoryId);
+    }
   }
 }

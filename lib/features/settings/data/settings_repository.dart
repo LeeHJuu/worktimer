@@ -1,5 +1,6 @@
 import 'package:worktimer/core/database/app_database.dart';
 import 'package:worktimer/core/constants.dart';
+import 'package:worktimer/core/logging/app_logger.dart';
 import 'package:worktimer/features/settings/data/i_settings_repository.dart';
 
 /// drift 기반 설정 Repository 구현체
@@ -29,7 +30,12 @@ class SettingsRepository implements ISettingsRepository {
       AppConstants.keyWeekdayHours,
       defaultValue: AppConstants.defaultWeekdayHours,
     );
-    return double.tryParse(v) ?? 1.5;
+    final parsed = double.tryParse(v);
+    if (parsed == null) {
+      AppLog.w('weekdayHours unparseable: "$v" (using fallback 1.5)');
+      return 1.5;
+    }
+    return parsed;
   }
 
   @override
@@ -38,6 +44,11 @@ class SettingsRepository implements ISettingsRepository {
       AppConstants.keyWeekendHours,
       defaultValue: AppConstants.defaultWeekendHours,
     );
-    return double.tryParse(v) ?? 4.0;
+    final parsed = double.tryParse(v);
+    if (parsed == null) {
+      AppLog.w('weekendHours unparseable: "$v" (using fallback 4.0)');
+      return 4.0;
+    }
+    return parsed;
   }
 }

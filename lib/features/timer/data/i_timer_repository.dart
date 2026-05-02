@@ -12,6 +12,13 @@ abstract class ITimerRepository {
     required int durationSec,
   });
 
+  /// 진행 중 세션의 durationSec만 갱신 (heartbeat — endedAt은 null 유지).
+  /// 비정상 종료 후 복구 시 wall-clock 추정 대신 이 값을 신뢰한다.
+  Future<void> heartbeatSession({
+    required int id,
+    required int durationSec,
+  });
+
   /// 오늘의 집중 세션 스트림 (is_focus=true만)
   Stream<List<TimerSession>> watchTodaySessions();
 

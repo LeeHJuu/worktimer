@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:worktimer/core/database/app_database.dart';
+import 'package:worktimer/core/logging/app_logger.dart';
 import 'package:worktimer/features/timer/data/i_timer_repository.dart';
 
 /// drift 기반 타이머 세션 Repository 구현체
@@ -27,6 +28,17 @@ class TimerRepository implements ITimerRepository {
   }
 
   @override
+  Future<void> heartbeatSession({
+    required int id,
+    required int durationSec,
+  }) async {
+    await (_db.update(_db.timerSessions)..where((t) => t.id.equals(id)))
+        .write(TimerSessionsCompanion(
+      durationSec: Value(durationSec),
+    ));
+  }
+
+  @override
   Stream<List<TimerSession>> watchTodaySessions() {
     final todayStart = _todayStartUnix();
     final todayEnd = todayStart + 86400;
@@ -40,10 +52,12 @@ class TimerRepository implements ITimerRepository {
   }
 
   @override
-  Future<List<TimerSession>> findOpenSessions() {
-    return (_db.select(_db.timerSessions)
+  Future<List<TimerSession>> findOpenSessions() async {
+    final rows = await (_db.select(_db.timerSessions)
           ..where((t) => t.endedAt.isNull()))
         .get();
+    AppLog.d('findOpenSessions -> ${rows.length}');
+    return rows;
   }
 
   @override

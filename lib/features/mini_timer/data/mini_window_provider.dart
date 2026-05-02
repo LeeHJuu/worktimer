@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:worktimer/core/logging/app_logger.dart';
 import 'package:worktimer/core/platform/capability.dart';
 import 'package:worktimer/core/database/app_database.dart';
 import 'package:worktimer/features/timer/data/timer_service.dart';
@@ -28,23 +29,30 @@ final miniWindowBridgeProvider = Provider<void>((ref) {
   // ── 미니 창 → 메인 창 명령 처리 ──────────────────────
   DesktopMultiWindow.setMethodHandler((call, fromWindowId) async {
     if (call.method == 'mini_command') {
-      final data =
-          jsonDecode(call.arguments as String) as Map<String, dynamic>;
-      final cmd = data['cmd'] as String?;
-      final notifier = ref.read(timerServiceProvider.notifier);
-      switch (cmd) {
-        case 'pause':
-          notifier.pause();
-          break;
-        case 'resume':
-          notifier.resume();
-          break;
-        case 'stop':
-          await notifier.stop();
-          break;
-        case 'mini_closed':
-          ref.read(miniWindowIdProvider.notifier).state = null;
-          break;
+      try {
+        final data =
+            jsonDecode(call.arguments as String) as Map<String, dynamic>;
+        final cmd = data['cmd'] as String?;
+        AppLog.d('mini_command from=$fromWindowId cmd=$cmd');
+        final notifier = ref.read(timerServiceProvider.notifier);
+        switch (cmd) {
+          case 'pause':
+            notifier.pause();
+            break;
+          case 'resume':
+            notifier.resume();
+            break;
+          case 'stop':
+            await notifier.stop();
+            break;
+          case 'mini_closed':
+            ref.read(miniWindowIdProvider.notifier).state = null;
+            break;
+          default:
+            AppLog.w('mini_command unknown cmd=$cmd');
+        }
+      } catch (e, st) {
+        AppLog.e('mini_command handler failed', e, st);
       }
     }
     return '';
@@ -73,7 +81,9 @@ Future<void> _pushTimerState(Ref ref, int windowId, TimerState state) async {
   Category? cat;
   try {
     cat = cats.firstWhere((c) => c.id == state.activeCategoryId);
-  } catch (_) {}
+  } catch (_) {
+    // activeCategoryId 없거나 카테고리 미로드 — 정상 케이스
+  }
 
   try {
     await DesktopMultiWindow.invokeMethod(
@@ -87,8 +97,9 @@ Future<void> _pushTimerState(Ref ref, int windowId, TimerState state) async {
         'categoryColor': cat?.color ?? '#6C63FF',
       }),
     );
-  } catch (_) {
-    // 창이 이미 닫힌 경우 상태 초기화
+  } catch (e, st) {
+    // 창이 이미 닫힌 경우 정상 / 그 외엔 추적 가치 있음
+    AppLog.w('mini_window IPC failed (window closed?) windowId=$windowId', e, st);
     ref.read(miniWindowIdProvider.notifier).state = null;
   }
 }

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:worktimer/core/database/app_database.dart';
+import 'package:worktimer/core/logging/app_logger.dart';
 import 'package:worktimer/features/manage/data/i_shortcut_repository.dart';
 
 /// drift 기반 바로가기 Repository 구현체
@@ -28,12 +29,15 @@ class ShortcutRepository implements IShortcutRepository {
   }
 
   @override
-  Future<int> insert(ShortcutsCompanion companion) {
-    return _db.into(_db.shortcuts).insert(companion);
+  Future<int> insert(ShortcutsCompanion companion) async {
+    final id = await _db.into(_db.shortcuts).insert(companion);
+    AppLog.d('shortcut insert id=$id');
+    return id;
   }
 
   @override
   Future<void> update(ShortcutsCompanion companion) async {
+    AppLog.d('shortcut update id=${companion.id.value}');
     await (_db.update(_db.shortcuts)
           ..where((t) => t.id.equals(companion.id.value)))
         .write(companion);
@@ -41,12 +45,14 @@ class ShortcutRepository implements IShortcutRepository {
 
   @override
   Future<void> delete(int id) async {
+    AppLog.d('shortcut delete id=$id');
     await (_db.delete(_db.shortcuts)..where((t) => t.id.equals(id))).go();
   }
 
   @override
   Future<void> updateSortOrders(
       List<({int id, int sortOrder})> orders) async {
+    AppLog.d('shortcut updateSortOrders count=${orders.length}');
     await _db.transaction(() async {
       for (final o in orders) {
         await (_db.update(_db.shortcuts)..where((t) => t.id.equals(o.id)))

@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:worktimer/core/logging/app_logger.dart';
 import 'package:worktimer/core/database/tables/categories_table.dart';
 import 'package:worktimer/core/database/tables/shortcuts_table.dart';
 import 'package:worktimer/core/database/tables/timer_sessions_table.dart';
@@ -34,35 +35,42 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
+          AppLog.i('DB onCreate (schema=$schemaVersion)');
           await m.createAll();
           await _insertDefaultSettings();
+          AppLog.i('DB onCreate done');
         },
         onUpgrade: (m, from, to) async {
+          AppLog.i('DB onUpgrade $from -> $to');
           if (from < 2) {
+            AppLog.i('migrate v2: add timerSessions.memo');
             await m.addColumn(timerSessions, timerSessions.memo);
           }
           if (from < 3) {
+            AppLog.i('migrate v3: add categories.autoTimerOn');
             await m.addColumn(categories, categories.autoTimerOn);
           }
           if (from < 4) {
-            // v4: Shortcuts에 auto_start 컬럼 추가 (기본 true)
+            AppLog.i('migrate v4: add shortcuts.autoStart');
             await m.addColumn(shortcuts, shortcuts.autoStart);
           }
           if (from < 5) {
-            // v5: type='exe' 값을 OS 중립적인 'app'으로 일반화.
-            //     향후 macOS .app도 동일 'app' 타입으로 처리.
+            AppLog.i("migrate v5: shortcuts.type 'exe' -> 'app'");
             await m.database.customStatement(
               "UPDATE shortcuts SET type = 'app' WHERE type = 'exe'",
             );
           }
           if (from < 6) {
+            AppLog.i('migrate v6: create todos table');
             await m.createTable(todos);
           }
+          AppLog.i('DB onUpgrade done');
         },
       );
 
   /// 모든 사용자 데이터를 삭제하고 설정을 기본값으로 초기화
   Future<void> resetAllData() async {
+    AppLog.i('resetAllData start');
     await transaction(() async {
       await delete(timerSessions).go();
       await delete(conditionLogs).go();
@@ -71,6 +79,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(settings).go();
       await _insertDefaultSettings();
     });
+    AppLog.i('resetAllData done');
   }
 
   /// 기본 설정값 삽입
@@ -90,8 +99,14 @@ class AppDatabase extends _$AppDatabase {
 /// SQLite 파일 기반 연결 (path_provider 사용)
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'worktimer.db'));
-    return NativeDatabase.createInBackground(file);
+    try {
+      final dbFolder = await getApplicationDocumentsDirectory();
+      final file = File(p.join(dbFolder.path, 'worktimer.db'));
+      AppLog.i('opening DB at ${file.path} (exists=${file.existsSync()})');
+      return NativeDatabase.createInBackground(file);
+    } catch (e, st) {
+      AppLog.e('DB open failed', e, st);
+      rethrow;
+    }
   });
 }

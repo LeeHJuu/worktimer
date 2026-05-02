@@ -4,6 +4,7 @@ import 'package:worktimer/core/constants.dart';
 import 'package:worktimer/core/database/database_provider.dart';
 import 'package:worktimer/features/settings/data/settings_provider.dart';
 import 'package:worktimer/features/settings/view/widgets/feedback_section.dart';
+import 'package:worktimer/features/settings/view/widgets/log_export_section.dart';
 import 'package:worktimer/features/settings/view/widgets/platform_integration_section.dart';
 import 'package:worktimer/features/settings/view/widgets/reset_data_card.dart';
 import 'package:worktimer/features/settings/view/widgets/section_title.dart';
@@ -167,6 +168,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 32),
 
               const SectionTitle(title: '지원'),
+              const SizedBox(height: 12),
+              const LogExportSection(),
               const SizedBox(height: 12),
               const FeedbackSection(),
               const SizedBox(height: 32),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:worktimer/core/logging/app_logger.dart';
 import 'package:worktimer/core/platform/capability.dart' show PlatformId;
 import 'package:worktimer/core/platform/capability_registry.dart';
 import 'package:worktimer/core/theme.dart';
@@ -32,7 +34,8 @@ Future<Size?> _loadSavedWindowSize() async {
       (data['width'] as num).toDouble(),
       (data['height'] as num).toDouble(),
     );
-  } catch (_) {
+  } catch (e, st) {
+    AppLog.w('window prefs load failed', e, st);
     return null;
   }
 }
@@ -43,15 +46,20 @@ Future<void> _saveWindowSize(Size size) async {
     await file.writeAsString(
       jsonEncode({'width': size.width, 'height': size.height}),
     );
-  } catch (_) {}
+  } catch (e, st) {
+    AppLog.w('window prefs save failed', e, st);
+  }
 }
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppLog.init();
+  AppLog.i('main entry args=$args');
 
   // ── 서브윈도우 (미니 타이머) 진입점 ────────────────
   if (args.firstOrNull == 'multi_window') {
     final platform = _parseMiniArgsPlatform(args);
+    AppLog.i('starting mini window platform=$platform');
     await _runMiniWindow(platform);
     return;
   }
@@ -59,6 +67,7 @@ void main(List<String> args) async {
   // ── 메인 창 ────────────────────────────────────────
   await windowManager.ensureInitialized();
   final savedSize = await _loadSavedWindowSize();
+  AppLog.i('main window size=${savedSize ?? _kDefaultWindowSize} (saved=${savedSize != null})');
   final windowOptions = WindowOptions(
     size: savedSize ?? _kDefaultWindowSize,
     minimumSize: const Size(480, 400),
@@ -69,11 +78,15 @@ void main(List<String> args) async {
     await windowManager.show();
     await windowManager.focus();
   });
-  runApp(
-    const ProviderScope(
-      child: WorkTimerApp(),
-    ),
-  );
+  runZonedGuarded(() {
+    runApp(
+      const ProviderScope(
+        child: WorkTimerApp(),
+      ),
+    );
+  }, (error, stack) {
+    AppLog.e('uncaught zone error', error, stack);
+  });
 }
 
 /// 미니 타이머 서브윈도우 args에서 platform 추출.
@@ -94,7 +107,9 @@ PlatformId _parseMiniArgsPlatform(List<String> args) {
         }
       }
     }
-  } catch (_) {}
+  } catch (e, st) {
+    AppLog.w('mini window args parse failed', e, st);
+  }
   return currentPlatform();
 }
 
@@ -194,14 +209,21 @@ class _AppInitializerState extends ConsumerState<_AppInitializer>
   }
 
   Future<void> _initialize() async {
-    ref.read(appDatabaseProvider);
-    await ref.read(timerServiceProvider.notifier).recoverOpenSessions();
+    AppLog.i('app initializing');
+    try {
+      ref.read(appDatabaseProvider);
+      await ref.read(timerServiceProvider.notifier).recoverOpenSessions();
 
-    // 자동 타이머 컨트롤러 eager 생성 (항상 활성)
-    ref.read(autoTimerControllerProvider);
+      // 자동 타이머 컨트롤러 eager 생성 (항상 활성)
+      ref.read(autoTimerControllerProvider);
 
-    // 미니 타이머 IPC 브릿지 활성화
-    ref.read(miniWindowBridgeProvider);
+      // 미니 타이머 IPC 브릿지 활성화
+      ref.read(miniWindowBridgeProvider);
+      AppLog.i('app initialized');
+    } catch (e, st) {
+      AppLog.e('app initialization failed', e, st);
+      rethrow;
+    }
 
     if (mounted) setState(() => _initialized = true);
   }

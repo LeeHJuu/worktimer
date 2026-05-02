@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart';
 
+import 'package:worktimer/core/logging/app_logger.dart';
 import 'package:worktimer/features/timer/data/shortcut_launch_result.dart';
 import 'package:worktimer/core/platform/installed_app.dart';
 import 'package:worktimer/core/platform/platform_integration_service.dart';
@@ -50,6 +51,9 @@ class WindowsIntegrationService implements PlatformIntegrationService {
       '-Command',
       '[Environment]::GetFolderPath("Desktop")',
     ]);
+    if (r.exitCode != 0) {
+      AppLog.e('powershell desktopPath failed exit=${r.exitCode} stderr=${r.stderr}');
+    }
     return r.stdout.toString().trim();
   }
 
@@ -59,6 +63,9 @@ class WindowsIntegrationService implements PlatformIntegrationService {
       '-Command',
       '[Environment]::GetFolderPath("Startup")',
     ]);
+    if (r.exitCode != 0) {
+      AppLog.e('powershell startupPath failed exit=${r.exitCode} stderr=${r.stderr}');
+    }
     return r.stdout.toString().trim();
   }
 
@@ -76,6 +83,7 @@ class WindowsIntegrationService implements PlatformIntegrationService {
 
   @override
   Future<void> setDesktopShortcut(bool enabled) async {
+    AppLog.i('setDesktopShortcut enabled=$enabled');
     final path = '${await _desktopPath()}\\WorkTimer.lnk';
     if (enabled) {
       await _createShortcut(path);
@@ -87,6 +95,7 @@ class WindowsIntegrationService implements PlatformIntegrationService {
 
   @override
   Future<void> setStartup(bool enabled) async {
+    AppLog.i('setStartup enabled=$enabled');
     final path = '${await _startupPath()}\\WorkTimer.lnk';
     if (enabled) {
       await _createShortcut(path);
@@ -99,6 +108,7 @@ class WindowsIntegrationService implements PlatformIntegrationService {
   Future<void> _createShortcut(String shortcutPath) async {
     final exe = _exePath;
     final workDir = File(exe).parent.path;
+    AppLog.i('createShortcut path=$shortcutPath exe=$exe');
     final script = [
       r'$ws = New-Object -ComObject WScript.Shell',
       "\$s = \$ws.CreateShortcut('$shortcutPath')",
@@ -114,6 +124,7 @@ class WindowsIntegrationService implements PlatformIntegrationService {
       script,
     ]);
     if (result.exitCode != 0) {
+      AppLog.e('createShortcut failed exit=${result.exitCode} stderr=${result.stderr}');
       throw Exception('바로가기 생성 실패: ${result.stderr}');
     }
   }
@@ -122,13 +133,16 @@ class WindowsIntegrationService implements PlatformIntegrationService {
 
   @override
   Future<ShortcutLaunchResult> launchApp(String absolutePath) async {
+    AppLog.i('launchApp $absolutePath');
     if (!File(absolutePath).existsSync()) {
+      AppLog.w('launchApp: file not found $absolutePath');
       return ShortcutLaunchResult.failure('파일을 찾을 수 없습니다: $absolutePath');
     }
     try {
       await Process.start(absolutePath, [], runInShell: false);
       return ShortcutLaunchResult.success();
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.e('launchApp Process.start failed', e, st);
       return ShortcutLaunchResult.failure(e.toString());
     }
   }
@@ -137,7 +151,10 @@ class WindowsIntegrationService implements PlatformIntegrationService {
 
   @override
   Future<bool> extractAppIcon(String exePath, String outputPngPath) async {
-    if (!File(exePath).existsSync()) return false;
+    if (!File(exePath).existsSync()) {
+      AppLog.w('extractAppIcon: exe not found $exePath');
+      return false;
+    }
     final safeExe = exePath.replaceAll("'", "''");
     final safeOut = outputPngPath.replaceAll("'", "''");
     final script = '''
@@ -151,7 +168,11 @@ Add-Type -AssemblyName System.Drawing;
       'powershell',
       ['-NoProfile', '-NonInteractive', '-Command', script],
     );
-    return result.exitCode == 0 && File(outputPngPath).existsSync();
+    final ok = result.exitCode == 0 && File(outputPngPath).existsSync();
+    if (!ok) {
+      AppLog.w('extractAppIcon failed exe=$exePath exit=${result.exitCode} stderr=${result.stderr}');
+    }
+    return ok;
   }
 
   // ── 설치된 앱 목록 ───────────────────────────
@@ -180,11 +201,15 @@ $results | Sort-Object -Unique | Write-Output
 
   @override
   Future<List<InstalledApp>> fetchInstalledApps() async {
+    AppLog.i('fetchInstalledApps start');
     final result = await Process.run(
       'powershell',
       ['-NoProfile', '-NonInteractive', '-Command', _installedAppsScript],
     );
-    if (result.exitCode != 0) return const [];
+    if (result.exitCode != 0) {
+      AppLog.e('fetchInstalledApps powershell failed exit=${result.exitCode} stderr=${result.stderr}');
+      return const [];
+    }
 
     final lines = result.stdout.toString().split('\n');
     final apps = <InstalledApp>[];
@@ -200,6 +225,7 @@ $results | Sort-Object -Unique | Write-Output
       }
     }
     apps.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    AppLog.i('fetchInstalledApps done count=${apps.length}');
     return apps;
   }
 
@@ -242,24 +268,36 @@ $results | Sort-Object -Unique | Write-Output
 
   String? _readForegroundExe() {
     final hwnd = GetForegroundWindow();
-    if (hwnd == 0) return null;
+    if (hwnd == 0) {
+      AppLog.d('foreground: hwnd=0');
+      return null;
+    }
 
     final pidPtr = calloc<Uint32>();
     try {
       GetWindowThreadProcessId(hwnd, pidPtr);
       final pid = pidPtr.value;
-      if (pid == 0) return null;
+      if (pid == 0) {
+        AppLog.d('foreground: pid=0 hwnd=$hwnd');
+        return null;
+      }
 
       const accessRights = PROCESS_QUERY_LIMITED_INFORMATION;
       final hProc = OpenProcess(accessRights, FALSE, pid);
-      if (hProc == 0) return null;
+      if (hProc == 0) {
+        AppLog.d('foreground: OpenProcess failed pid=$pid');
+        return null;
+      }
 
       try {
         final bufLen = calloc<Uint32>()..value = 1024;
         final buf = wsalloc(1024);
         try {
           final ok = QueryFullProcessImageName(hProc, 0, buf, bufLen);
-          if (ok == 0) return null;
+          if (ok == 0) {
+            AppLog.d('foreground: QueryFullProcessImageName failed pid=$pid');
+            return null;
+          }
           return buf.toDartString();
         } finally {
           free(buf);

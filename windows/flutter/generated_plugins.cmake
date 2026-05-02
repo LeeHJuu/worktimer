@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_multi_window
   screen_retriever_windows
+  share_plus
   sqlite3_flutter_libs
   url_launcher_windows
   window_manager

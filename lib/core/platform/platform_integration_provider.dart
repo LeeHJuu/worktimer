@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:worktimer/core/logging/app_logger.dart';
 import 'package:worktimer/core/platform/capability.dart';
 import 'package:worktimer/core/platform/noop_integration_service.dart';
 import 'package:worktimer/core/platform/platform_integration_service.dart';
@@ -69,12 +70,22 @@ class PlatformIntegrationNotifier
       state = const PlatformIntegrationState(loading: false);
       return;
     }
-    final desktop = _caps.has(Capability.desktopShortcut)
-        ? await _service.hasDesktopShortcut()
-        : false;
-    final startup = _caps.has(Capability.startupAutorun)
-        ? await _service.isStartupEnabled()
-        : false;
+    bool desktop = false;
+    bool startup = false;
+    if (_caps.has(Capability.desktopShortcut)) {
+      try {
+        desktop = await _service.hasDesktopShortcut();
+      } catch (e, st) {
+        AppLog.e('hasDesktopShortcut failed', e, st);
+      }
+    }
+    if (_caps.has(Capability.startupAutorun)) {
+      try {
+        startup = await _service.isStartupEnabled();
+      } catch (e, st) {
+        AppLog.e('isStartupEnabled failed', e, st);
+      }
+    }
     state = PlatformIntegrationState(
       desktopShortcut: desktop,
       startup: startup,
@@ -83,13 +94,23 @@ class PlatformIntegrationNotifier
   }
 
   Future<void> setDesktopShortcut(bool enabled) async {
-    await _service.setDesktopShortcut(enabled);
-    state = state.copyWith(desktopShortcut: enabled);
+    try {
+      await _service.setDesktopShortcut(enabled);
+      state = state.copyWith(desktopShortcut: enabled);
+    } catch (e, st) {
+      AppLog.e('setDesktopShortcut failed enabled=$enabled', e, st);
+      rethrow;
+    }
   }
 
   Future<void> setStartup(bool enabled) async {
-    await _service.setStartup(enabled);
-    state = state.copyWith(startup: enabled);
+    try {
+      await _service.setStartup(enabled);
+      state = state.copyWith(startup: enabled);
+    } catch (e, st) {
+      AppLog.e('setStartup failed enabled=$enabled', e, st);
+      rethrow;
+    }
   }
 }
 

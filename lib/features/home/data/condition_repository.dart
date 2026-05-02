@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:worktimer/core/database/app_database.dart';
+import 'package:worktimer/core/logging/app_logger.dart';
 import 'package:worktimer/features/home/data/i_condition_repository.dart';
 
 /// Drift 기반 컨디션 Repository 구현체
@@ -21,6 +22,7 @@ class ConditionRepository implements IConditionRepository {
     required String date,
     required int level,
   }) async {
+    AppLog.d('saveCondition date=$date level=$level');
     await _db.into(_db.conditionLogs).insert(
           ConditionLogsCompanion.insert(date: date, level: level),
           onConflict: DoUpdate(
