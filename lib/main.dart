@@ -152,6 +152,11 @@ class _WorkTimerAppState extends ConsumerState<WorkTimerApp> {
   void initState() {
     super.initState();
     _upgrader = Upgrader(
+      // 진단용 로그(앱 stdout / `flutter logs`로 확인 가능).
+      // fetch HTTP 결과, installedVersion, appStoreVersion 등을 출력한다.
+      debugLogging: true,
+      // 새 릴리즈가 빨리 노출되도록 주기 단축(기본 3일).
+      durationUntilAlertAgain: const Duration(hours: 6),
       storeController: UpgraderStoreController(
         onWindows: () => UpgraderAppcastStore(
           appcastURL: 'https://raw.githubusercontent.com/leehjuu/worktimer/main/appcast.xml',
@@ -169,17 +174,16 @@ class _WorkTimerAppState extends ConsumerState<WorkTimerApp> {
       title: 'WorkTimer',
       debugShowCheckedModeBanner: false,
       theme: themeData,
-      home: UpgradeAlert(
-        upgrader: _upgrader,
-        child: const _AppInitializer(),
-      ),
+      home: _AppInitializer(upgrader: _upgrader),
     );
   }
 }
 
 /// 앱 초기화 위젯 — DB 준비 후 AppShell 표시
 class _AppInitializer extends ConsumerStatefulWidget {
-  const _AppInitializer();
+  const _AppInitializer({required this.upgrader});
+
+  final Upgrader upgrader;
 
   @override
   ConsumerState<_AppInitializer> createState() => _AppInitializerState();
@@ -235,6 +239,12 @@ class _AppInitializerState extends ConsumerState<_AppInitializer>
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    return const AppShell();
+    // 초기화 완료 후 AppShell이 마운트될 때 한 번만 UpgradeAlert가 트리에 들어가도록 한다.
+    // splash 단계에서 함께 마운트하면 postFrame 콜백 타이밍이 어긋나 다이얼로그가
+    // 한 번도 표시되지 않는 경우가 보고됨.
+    return UpgradeAlert(
+      upgrader: widget.upgrader,
+      child: const AppShell(),
+    );
   }
 }
